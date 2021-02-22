@@ -104,6 +104,21 @@ const fetchBlockByHash = hash => {
 
 }
 
+// Given block number, first fetch hash of block, then fetch block using hash
+const fetchBlockByNumber = num => {
+
+    const hash = fetchBlockHashByNumber(num)
+    if (!hash) {
+        return null
+    }
+
+    const block = fetchBlockByHash(hash)
+    if (!block) {
+        return null
+    }
+
+}
+
 const processBlocksInRange = (x, y) => {
 
     for (let i = x; i <= y; i++) {
