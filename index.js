@@ -183,6 +183,7 @@ const processBlocksInRange = async (x, y) => {
 
 }
 
+// Sleep for `t` millisecond
 const sleep = t => {
     setTimeout(_ => { }, t)
 }
@@ -196,12 +197,12 @@ const main = async _ => {
 
         const block = await getLatestBlockHeader()
         if (!block) {
-            sleep(2000)
+            sleep(3000)
             continue
         }
 
         if (lastSeenBlock == BigInt(block.number)) {
-            sleep(2000)
+            sleep(6000)
             continue
         }
 
