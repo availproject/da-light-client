@@ -45,7 +45,7 @@ const getLatestBlockHeader = async _ => {
 }
 
 // Given block number, get block hash
-const fetchBlockHashByNumber = num => {
+const fetchBlockHashByNumber = async num => {
 
     try {
 
@@ -75,7 +75,7 @@ const fetchBlockHashByNumber = num => {
 }
 
 // Given block hash, attempts to fetch block
-const fetchBlockByHash = hash => {
+const fetchBlockByHash = async hash => {
 
     try {
 
@@ -105,38 +105,108 @@ const fetchBlockByHash = hash => {
 }
 
 // Given block number, first fetch hash of block, then fetch block using hash
-const fetchBlockByNumber = num => {
+const fetchBlockByNumber = async anum => {
 
-    const hash = fetchBlockHashByNumber(num)
+    const hash = await fetchBlockHashByNumber(num)
     if (!hash) {
         return null
     }
 
-    const block = fetchBlockByHash(hash)
-    if (!block) {
-        return null
+    return await fetchBlockByHash(hash)
+
+}
+
+// Given a block, which is already fetched, attempts to
+// verify block content by checking commitment & proof asked by
+// cell indices
+const verifyBlock = async block => {
+
+    const commitment = block.block.header.extrinsicsRoot.commitment
+    const status = { success: 0, failure: 0 }
+
+    for (let i = 0; i <= AskProofCount; i++) {
+
+        let [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
+
+        try {
+
+            const proof = await axios.post(HTTPURI,
+                {
+                    "id": 1,
+                    "jsonrpc": "2.0",
+                    "method": "kate_queryProof",
+                    "params": [lastHeader.number, [{ "row": x, "col": y }]]
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }
+            )
+
+            if (verifyProof(x, y, commitment, proof.data.result)) {
+                status.success++
+            } else {
+                status.failure++
+            }
+
+        } catch (e) {
+
+            console.error(e.toString())
+            status.failure++
+
+        }
+
+    }
+
+    console.log(`[+] Verified block with ${status}}`)
+
+}
+
+// Given block number range, fetches all of them & attempts to
+// verify each of them
+const processBlocksInRange = async (x, y) => {
+
+    for (let i = x; i <= y; i += BigInt(1)) {
+
+        console.log(`[*] Processing block : ${i}`)
+
+        const block = await fetchBlockByNumber(i)
+        if (!block) {
+            continue
+        }
+
+        await verifyBlock(block)
+        console.log(`[+] Processed block : ${i}`)
+
     }
 
 }
 
-const processBlocksInRange = (x, y) => {
-
-    for (let i = x; i <= y; i++) {
-
-
-
-    }
-
+const sleep = t => {
+    setTimeout(_ => { }, t)
 }
 
-// Main entry point function, to be invoked for starting light client ops
-const main = _ => {
+// Main entry point, to be invoked for starting light client ops
+const main = async _ => {
 
-    let lastSeenBlock = BigInt(0)
+    let lastSeenBlock = BigInt(-1)
 
     while (1) {
 
+        const block = await getLatestBlockHeader()
+        if (!block) {
+            sleep(2000)
+            continue
+        }
 
+        if (lastSeenBlock == BigInt(block.number)) {
+            sleep(2000)
+            continue
+        }
+
+        await processBlocksInRange(lastSeenBlock + BigInt(1), BigInt(block.number))
+        lastSeenBlock = BigInt(block.number)
 
     }
 
