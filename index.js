@@ -74,6 +74,36 @@ const fetchBlockHashByNumber = num => {
 
 }
 
+// Given block hash, attempts to fetch block
+const fetchBlockByHash = hash => {
+
+    try {
+
+        const blockHeader = await axios.post(HTTPURI,
+            {
+                "id": 1,
+                "jsonrpc": "2.0",
+                "method": "chain_getBlock",
+                "params": [hash]
+            },
+            {
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+
+        return 'result' in blockHeader.data ? blockHeader.data.result : null
+
+    } catch (e) {
+
+        console.error(e.toString())
+        return null
+
+    }
+
+}
+
 const processBlocksInRange = (x, y) => {
 
     for (let i = x; i <= y; i++) {
