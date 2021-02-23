@@ -11,7 +11,7 @@ const MatrixDimY = 256
 // where lower bound is inclusive, but other end is not
 const getRandomInt = (low, high) => {
 
-    return Math.floor(Math.random() * (high - low + 1)) + low
+    return Math.floor(Math.random() * (high - low)) + low
 
 }
 
@@ -124,7 +124,7 @@ const verifyBlock = async block => {
     const commitment = block.block.header.extrinsicsRoot.commitment
     const status = { success: 0, failure: 0 }
 
-    for (let i = 0; i <= AskProofCount; i++) {
+    for (let i = 0; i < AskProofCount; i++) {
 
         let [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
 
@@ -159,7 +159,7 @@ const verifyBlock = async block => {
 
     }
 
-    console.log(`[+] Verified block with ${status}}`)
+    console.log(`[+] Verified block with ${JSON.stringify(status)}`)
 
 }
 
