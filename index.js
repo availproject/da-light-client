@@ -11,7 +11,7 @@ const MatrixDimY = 256
 // where lower bound is inclusive, but other end is not
 const getRandomInt = (low, high) => {
 
-    return Math.floor(Math.random() * (high - low + 1)) + low
+    return Math.floor(Math.random() * (high - low)) + low
 
 }
 
@@ -49,7 +49,7 @@ const fetchBlockHashByNumber = async num => {
 
     try {
 
-        const blockHeader = await axios.post(HTTPURI,
+        const blockHash = await axios.post(HTTPURI,
             {
                 "id": 1,
                 "jsonrpc": "2.0",
@@ -63,7 +63,7 @@ const fetchBlockHashByNumber = async num => {
             }
         )
 
-        return 'result' in blockHeader.data ? blockHeader.data.result : null
+        return 'result' in blockHash.data ? blockHash.data.result : null
 
     } catch (e) {
 
@@ -105,7 +105,7 @@ const fetchBlockByHash = async hash => {
 }
 
 // Given block number, first fetch hash of block, then fetch block using hash
-const fetchBlockByNumber = async anum => {
+const fetchBlockByNumber = async num => {
 
     const hash = await fetchBlockHashByNumber(num)
     if (!hash) {
@@ -124,7 +124,7 @@ const verifyBlock = async block => {
     const commitment = block.block.header.extrinsicsRoot.commitment
     const status = { success: 0, failure: 0 }
 
-    for (let i = 0; i <= AskProofCount; i++) {
+    for (let i = 0; i < AskProofCount; i++) {
 
         let [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
 
@@ -135,7 +135,7 @@ const verifyBlock = async block => {
                     "id": 1,
                     "jsonrpc": "2.0",
                     "method": "kate_queryProof",
-                    "params": [lastHeader.number, [{ "row": x, "col": y }]]
+                    "params": [block.block.header.number, [{ "row": x, "col": y }]]
                 },
                 {
                     headers: {
@@ -159,7 +159,7 @@ const verifyBlock = async block => {
 
     }
 
-    console.log(`[+] Verified block with ${status}}`)
+    console.log(`[+] Verified block with ${JSON.stringify(status)}`)
 
 }
 
@@ -167,7 +167,7 @@ const verifyBlock = async block => {
 // verify each of them
 const processBlocksInRange = async (x, y) => {
 
-    for (let i = x; i <= y; i += BigInt(1)) {
+    for (let i = x; i <= y; i++) {
 
         console.log(`[*] Processing block : ${i}`)
 
@@ -191,7 +191,7 @@ const sleep = t => {
 // Main entry point, to be invoked for starting light client ops
 const main = async _ => {
 
-    let lastSeenBlock = BigInt(-1)
+    let lastSeenBlock = -1
 
     while (1) {
 
@@ -201,14 +201,19 @@ const main = async _ => {
             continue
         }
 
-        if (lastSeenBlock == BigInt(block.number)) {
+        if (!(lastSeenBlock < block.number)) {
             sleep(6000)
             continue
         }
 
-        await processBlocksInRange(lastSeenBlock + BigInt(1), BigInt(block.number))
-        lastSeenBlock = BigInt(block.number)
+        await processBlocksInRange(lastSeenBlock + 1, block.number)
+        lastSeenBlock = block.number
 
     }
 
 }
+
+main().catch(e => {
+    console.error(e)
+    process.exit(1)
+})
