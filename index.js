@@ -212,3 +212,8 @@ const main = async _ => {
     }
 
 }
+
+main().catch(e => {
+    console.error(e)
+    process.exit(1)
+})
