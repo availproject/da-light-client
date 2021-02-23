@@ -105,7 +105,7 @@ const fetchBlockByHash = async hash => {
 }
 
 // Given block number, first fetch hash of block, then fetch block using hash
-const fetchBlockByNumber = async anum => {
+const fetchBlockByNumber = async num => {
 
     const hash = await fetchBlockHashByNumber(num)
     if (!hash) {
