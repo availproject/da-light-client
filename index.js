@@ -135,7 +135,7 @@ const verifyBlock = async block => {
                     "id": 1,
                     "jsonrpc": "2.0",
                     "method": "kate_queryProof",
-                    "params": [block.number, [{ "row": x, "col": y }]]
+                    "params": [block.block.header.number, [{ "row": x, "col": y }]]
                 },
                 {
                     headers: {
