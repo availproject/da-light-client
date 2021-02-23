@@ -3,7 +3,7 @@ const { verifyProof } = require('./verifier')
 
 const HTTPURI = 'http://localhost:9933'
 
-const AskProofCount = 30
+const AskProofCount = 1
 const MatrixDimX = 256
 const MatrixDimY = 256
 
@@ -144,7 +144,7 @@ const verifyBlock = async block => {
                 }
             )
 
-            if (verifyProof(x, y, commitment, proof.data.result)) {
+            if (verifyProof(x, y, commitment.slice(48 * x, x * 48 + 48), proof.data.result)) {
                 status.success++
             } else {
                 status.failure++
@@ -191,7 +191,7 @@ const sleep = t => {
 // Main entry point, to be invoked for starting light client ops
 const main = async _ => {
 
-    let lastSeenBlock = -1
+    let lastSeenBlock = 0
 
     while (1) {
 
