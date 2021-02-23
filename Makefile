@@ -1,3 +1,5 @@
+SHELL:=/bin/bash
+
 build:
 	pushd verifier; cargo build; popd
 
