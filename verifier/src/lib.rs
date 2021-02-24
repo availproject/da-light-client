@@ -8,7 +8,7 @@ use dusk_plonk::fft::{EvaluationDomain};
 use dusk_plonk::bls12_381::{G1Affine};
 
 use std::convert::TryInto;
-use dusk_bytes::Serializable;
+// use dusk_bytes::Serializable;
 
 // code for light client to verify incoming kate proofs
 // args - now - row number, column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
@@ -33,15 +33,14 @@ fn kc_verify_proof(row_num: u8, col_num: u8, response: Vec<u8>, commitment: Vec<
     // println!("{:?} {:?}", witness.len(), eval.len());
 
     unsafe {
-        let commitment_point = G1Affine::from_slice_unchecked(commitment.as_slice().try_into().expect("slice with incorrect length"));
-        let eval_point = dusk_plonk::prelude::BlsScalar::from_bytes(eval.try_into().expect("slice with incorrect length")).unwrap();
-        let witness_point = G1Affine::from_slice_unchecked(witness.try_into().expect("slice with incorrect length"));
-    
-    
+        let commitment_point = G1Affine::from_compressed(commitment.as_slice().try_into().expect("commitment slice with incorrect length")).unwrap();
+        let eval_point = dusk_plonk::prelude::BlsScalar::from_bytes(eval.try_into().expect("evaluation point slice with incorrect length")).unwrap();
+        let witness_point = G1Affine::from_compressed(witness.try_into().expect("witness slice with incorrect length")).unwrap();
+
         let proof = kzg10::Proof {
-            commitment_to_witness: kzg10::Commitment::from_affine(commitment_point),
+            commitment_to_witness: kzg10::Commitment::from_affine(witness_point),
             evaluated_point: eval_point,
-            commitment_to_polynomial: kzg10::Commitment::from_affine(witness_point)
+            commitment_to_polynomial: kzg10::Commitment::from_affine(commitment_point)
         };
 
         verifier_key.check(row_dom_x_pts[col_num as usize], proof)
