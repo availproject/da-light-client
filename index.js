@@ -201,13 +201,16 @@ const main = async _ => {
             continue
         }
 
-        if (!(lastSeenBlock < block.number)) {
+        // Parse block number in hex string format
+        const blockNumber = parseInt(block.number)
+
+        if (!(lastSeenBlock < blockNumber)) {
             sleep(6000)
             continue
         }
 
-        await processBlocksInRange(lastSeenBlock + 1, block.number)
-        lastSeenBlock = block.number
+        await processBlocksInRange(lastSeenBlock + 1, blockNumber)
+        lastSeenBlock = blockNumber
 
     }
 
