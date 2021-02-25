@@ -120,6 +120,45 @@ const fetchBlockByNumber = async num => {
 
 }
 
+// Single cell verification job is submiited in a different thread of
+// worker, using this function
+const singleIterationOfVerification = (blockNumber, x, y, commitment) => {
+
+    return new Promise(async (res, rej) => {
+
+        try {
+
+            const proof = await axios.post(HTTPURI,
+                {
+                    "id": 1,
+                    "jsonrpc": "2.0",
+                    "method": "kate_queryProof",
+                    "params": [blockNumber, [{ "row": x, "col": y }]]
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }
+            )
+
+            const worker = new Worker(workerScript, {
+                workerData: [x, y, commitment, proof.data.result]
+            })
+
+            worker.on('message', res)
+            worker.on('error', rej)
+
+        } catch (e) {
+            rej(e)
+        }
+
+    })
+
+}
+// -- ends here
+
+
 // Given a block, which is already fetched, attempts to
 // verify block content by checking commitment & proof asked by
 // cell indices
@@ -128,54 +167,13 @@ const verifyBlock = async block => {
     const blockNumber = block.block.header.number
     const commitment = block.block.header.extrinsicsRoot.commitment
 
-    // -- Closure for submitting job, starting here
-    //
-    // Single cell verification job is submiited in a different thread of
-    // worker, using this function
-    const singleIterationOfVerification = (x, y) => {
-
-        return new Promise((res, rej) => {
-
-            try {
-
-                const proof = await axios.post(HTTPURI,
-                    {
-                        "id": 1,
-                        "jsonrpc": "2.0",
-                        "method": "kate_queryProof",
-                        "params": [blockNumber, [{ "row": x, "col": y }]]
-                    },
-                    {
-                        headers: {
-                            "Content-Type": "application/json"
-                        }
-                    }
-                )
-
-                const worker = new Worker(workerScript, {
-                    workerData: [x, y, commitment.slice(48 * x, x * 48 + 48), proof.data.result]
-                })
-
-                worker.on('message', res)
-                worker.on('error', rej)
-
-            } catch (e) {
-                rej(e)
-            }
-
-        })
-
-    }
-    // -- ends here
-
     const _promises = []
 
     for (let i = 0; i < AskProofCount; i++) {
 
-        _promises.push(
-            singleIterationOfVerification(
-                getRandomInt(0, MatrixDimX),
-                getRandomInt(0, MatrixDimY)))
+        const [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
+
+        _promises.push(singleIterationOfVerification(blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48)))
 
     }
 
