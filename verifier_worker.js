@@ -5,7 +5,7 @@ const { verifyProof } = require('./verifier')
 
 const HTTPURI = 'http://localhost:9933'
 
-const verifyProofWorker = (blockNumber, x, y, commitment) => {
+const verifyProofWorker = async (blockNumber, x, y, commitment) => {
 
     try {
 
@@ -36,7 +36,9 @@ const verifyProofWorker = (blockNumber, x, y, commitment) => {
 
 if (!isMainThread) {
 
-    parentPort.postMessage(verifyProofWorker(...workerData))
+    verifyProofWorker(...workerData)
+        .then(v => { parentPort.postMessage(v) })
+        .catch(e => { parentPort.postMessage(e) })
 
 } else {
 

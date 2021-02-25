@@ -5,7 +5,7 @@ const { Worker } = require('worker_threads')
 
 const HTTPURI = 'http://localhost:9933'
 
-const AskProofCount = 1
+const AskProofCount = 3
 const MatrixDimX = 256
 const MatrixDimY = 256
 
@@ -160,7 +160,7 @@ const verifyBlock = async block => {
     }
 
     // Waiting for all verification iterations to finish
-    const status = (await Promise.all(_promises)).reduce((acc, cur) => { acc[cur]++ }, { true: 0, false: 0 })
+    const status = (await Promise.all(_promises)).reduce((acc, cur) => { acc[cur]++; return acc; }, { true: 0, false: 0 })
 
     console.log(`[+] Verified block with ${JSON.stringify(status)}`)
 
