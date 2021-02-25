@@ -136,12 +136,32 @@ const verifyBlock = async block => {
 
         return new Promise((res, rej) => {
 
-            const worker = new Worker(workerScript, {
-                workerData: [blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48)]
-            })
+            try {
 
-            worker.on('message', res)
-            worker.on('error', rej)
+                const proof = await axios.post(HTTPURI,
+                    {
+                        "id": 1,
+                        "jsonrpc": "2.0",
+                        "method": "kate_queryProof",
+                        "params": [blockNumber, [{ "row": x, "col": y }]]
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    }
+                )
+
+                const worker = new Worker(workerScript, {
+                    workerData: [x, y, commitment.slice(48 * x, x * 48 + 48), proof.data.result]
+                })
+
+                worker.on('message', res)
+                worker.on('error', rej)
+
+            } catch (e) {
+                rej(e)
+            }
 
         })
 
