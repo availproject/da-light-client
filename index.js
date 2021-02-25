@@ -1,11 +1,15 @@
 const { default: axios } = require('axios')
-const { verifyProof } = require('./verifier')
+const { join } = require('path')
+
+const { Worker } = require('worker_threads')
 
 const HTTPURI = 'http://localhost:9933'
 
 const AskProofCount = 1
 const MatrixDimX = 256
 const MatrixDimY = 256
+
+const workerScript = join(__dirname, './verifier_worker.js')
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
@@ -121,43 +125,42 @@ const fetchBlockByNumber = async num => {
 // cell indices
 const verifyBlock = async block => {
 
+    const blockNumber = block.block.header.number
     const commitment = block.block.header.extrinsicsRoot.commitment
-    const status = { success: 0, failure: 0 }
+
+    // -- Closure for submitting job, starting here
+    //
+    // Single cell verification job is submiited in a different thread of
+    // worker, using this function
+    const singleIterationOfVerification = (x, y) => {
+
+        return new Promise((res, rej) => {
+
+            const worker = new Worker(workerScript, {
+                workerData: [blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48)]
+            })
+
+            worker.on('message', res)
+            worker.on('error', rej)
+
+        })
+
+    }
+    // -- ends here
+
+    const _promises = []
 
     for (let i = 0; i < AskProofCount; i++) {
 
-        let [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
-
-        try {
-
-            const proof = await axios.post(HTTPURI,
-                {
-                    "id": 1,
-                    "jsonrpc": "2.0",
-                    "method": "kate_queryProof",
-                    "params": [block.block.header.number, [{ "row": x, "col": y }]]
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
-                }
-            )
-
-            if (verifyProof(x, y, commitment.slice(48 * x, x * 48 + 48), proof.data.result)) {
-                status.success++
-            } else {
-                status.failure++
-            }
-
-        } catch (e) {
-
-            console.error(e.toString())
-            status.failure++
-
-        }
+        _promises.push(
+            singleIterationOfVerification(
+                getRandomInt(0, MatrixDimX),
+                getRandomInt(0, MatrixDimY)))
 
     }
+
+    // Waiting for all verification iterations to finish
+    const status = (await Promise.all(_promises)).reduce((acc, cur) => { acc[cur]++ }, { true: 0, false: 0 })
 
     console.log(`[+] Verified block with ${JSON.stringify(status)}`)
 
