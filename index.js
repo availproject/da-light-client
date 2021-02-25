@@ -1,15 +1,11 @@
 const { default: axios } = require('axios')
-const { join } = require('path')
-
-const { Worker } = require('worker_threads')
+const { verifyProof } = require('./verifier')
 
 const HTTPURI = 'http://localhost:9933'
 
-const AskProofCount = 3
+const AskProofCount = 10
 const MatrixDimX = 256
 const MatrixDimY = 256
-
-const workerScript = join(__dirname, './verifier_worker.js')
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
@@ -142,12 +138,13 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) => {
                 }
             )
 
-            const worker = new Worker(workerScript, {
-                workerData: [x, y, commitment, proof.data.result]
-            })
+            if (proof.status != 200) {
 
-            worker.on('message', res)
-            worker.on('error', rej)
+                rej(new Error('Bad status code'))
+
+            }
+
+            res(verifyProof(x, y, commitment, proof.data.result))
 
         } catch (e) {
             rej(e)
@@ -156,8 +153,6 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) => {
     })
 
 }
-// -- ends here
-
 
 // Given a block, which is already fetched, attempts to
 // verify block content by checking commitment & proof asked by
