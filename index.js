@@ -246,6 +246,8 @@ const processBlocksInRange = async (x, y) => {
 
     try {
 
+        const start = new Date().getTime()
+
         const result = (await Promise.all(promises)).reduce((acc, cur) => {
 
             acc[cur.status].push(cur.block)
@@ -255,13 +257,13 @@ const processBlocksInRange = async (x, y) => {
 
         if (result[1].length != 0) {
 
-            console.log(`[✅] Processed + Verified ${result[1].length} blocks`)
+            console.log(`[✅] Processed + Verified ${result[1].length} block(s) in ${humanizeDuration(new Date().getTime() - start)}`)
 
         }
 
         if (result[0].length != 0) {
 
-            console.log(`[❌] Failed to Process + Verify ${result[0].length} blocks 👇`)
+            console.log(`[❌] Failed to Process + Verify ${result[0].length} block(s) 👇`)
             console.log(result[0])
 
         }
