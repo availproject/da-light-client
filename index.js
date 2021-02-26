@@ -234,7 +234,7 @@ const processBlocksInRange = async (x, y) => {
 
     try {
 
-        await Promise.all(promises)
+        console.log(`[✅] Processed + Verified ${(await Promise.all(promises)).length} blocks`)
 
     } catch (e) {
 
