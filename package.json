@@ -20,6 +20,7 @@
   "dependencies": {
     "axios": "^0.21.1",
     "ffi-napi": "^4.0.1",
+    "humanize-duration": "^3.25.1",
     "ref-array-di": "^1.2.2"
   }
 }

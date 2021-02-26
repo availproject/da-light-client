@@ -1,5 +1,6 @@
 const { default: axios } = require('axios')
 const { verifyProof } = require('./verifier')
+const humanizeDuration = require('humanize-duration')
 
 const HTTPURI = 'http://localhost:9933'
 
@@ -198,6 +199,8 @@ const processBlocksInRange = async (x, y) => {
     const processBlockByNumber = num =>
         new Promise(async (res, rej) => {
 
+            const start = new Date().getTime()
+
             console.log(`[🛠] Processing block : ${num}`)
 
             const block = await fetchBlockByNumber(num)
@@ -216,7 +219,7 @@ const processBlocksInRange = async (x, y) => {
             const result = await verifyBlock(block)
             if (result) {
 
-                console.log(`[✅] Processed block : ${num} with ${JSON.stringify(result)}`)
+                console.log(`[✅] Processed block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
 
                 res({
                     status: 1,
@@ -226,7 +229,7 @@ const processBlocksInRange = async (x, y) => {
 
             }
 
-            console.log(`[❌] Failed to verify block : ${num}`)
+            console.log(`[❌] Failed to verify block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
             res({
                 status: 0,
                 block: num
