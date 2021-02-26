@@ -69,10 +69,6 @@ pub extern "C" fn verify_proof(
         slice::from_raw_parts(p, p_len as usize)
     };
 
-    println!("Proof for cell [{}, {}]\n", row, col);
-    println!("{:X?}, len={:?}", commitment, commitment.len());
-    println!("{:X?}, len={:?}", proof, proof.len());
-
     kc_verify_proof(row, col, proof.to_vec(), commitment.to_vec())
     // true
 }
