@@ -246,6 +246,7 @@ const processBlocksInRange = async (x, y) => {
         const result = (await Promise.all(promises)).reduce((acc, cur) => {
 
             acc[cur.status].push(cur.block)
+            return acc
 
         }, { 0: [], 1: [] })
 
