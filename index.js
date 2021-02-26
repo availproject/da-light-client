@@ -203,9 +203,12 @@ const processBlocksInRange = async (x, y) => {
             const block = await fetchBlockByNumber(num)
             if (!block) {
 
-                console.log(`[❌] Failed to fetch block : ${num}`)
+                console.log()
 
-                res(0)
+                res({
+                    status: 0,
+                    block: num
+                })
                 return
 
             }
@@ -215,13 +218,19 @@ const processBlocksInRange = async (x, y) => {
 
                 console.log(`[✅] Processed block : ${num} with ${JSON.stringify(result)}`)
 
-                res(1)
+                res({
+                    status: 1,
+                    block: num
+                })
                 return
 
             }
 
             console.log(`[❌] Failed to verify block : ${num}`)
-            rej(0)
+            res({
+                status: 0,
+                block: num
+            })
 
         })
     // -- Closure ends here
@@ -234,7 +243,24 @@ const processBlocksInRange = async (x, y) => {
 
     try {
 
-        console.log(`[✅] Processed + Verified ${(await Promise.all(promises)).length} blocks`)
+        const result = (await Promise.all(promises)).reduce((acc, cur) => {
+
+            acc[cur.status].push(cur.block)
+
+        }, { 0: [], 1: [] })
+
+        if (result[1].length != 0) {
+
+            console.log(`[✅] Processed + Verified ${result[1].length} blocks`)
+
+        }
+
+        if (result[0].length != 0) {
+
+            console.log(`[❌] Failed to Process + Verify ${result[0].length} blocks 👇`)
+            console.log(result[0])
+
+        }
 
     } catch (e) {
 
