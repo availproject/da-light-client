@@ -118,9 +118,8 @@ const fetchBlockByNumber = async num => {
 
 // Single cell verification job is submiited in a different thread of
 // worker, using this function
-const singleIterationOfVerification = (blockNumber, x, y, commitment) => {
-
-    return new Promise(async (res, rej) => {
+const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
+    new Promise(async (res, rej) => {
 
         try {
 
@@ -152,8 +151,6 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) => {
 
     })
 
-}
-
 // Given a block, which is already fetched, attempts to
 // verify block content by checking commitment & proof asked by
 // cell indices
@@ -172,10 +169,20 @@ const verifyBlock = async block => {
 
     }
 
-    // Waiting for all verification iterations to finish
-    const status = (await Promise.all(_promises)).reduce((acc, cur) => { acc[cur]++; return acc; }, { true: 0, false: 0 })
+    try {
 
-    console.log(`[+] Verified block with ${JSON.stringify(status)}`)
+        // Waiting for all verifications to finish
+        const status = (await Promise.all(_promises))
+            .reduce((acc, cur) => { acc[cur]++; return acc; }, { true: 0, false: 0 })
+
+        return status
+
+    } catch (e) {
+
+        console.error(e.toString())
+        return null
+
+    }
 
 }
 
@@ -183,17 +190,55 @@ const verifyBlock = async block => {
 // verify each of them
 const processBlocksInRange = async (x, y) => {
 
+    // -- Starts here
+    //
+    // Closure for fetching single block & attempting
+    // to verify block by asking for proof `N` times
+    // where block number is given
+    const processBlockByNumber = num =>
+        new Promise(async (res, rej) => {
+
+            console.log(`[🛠] Processing block : ${num}`)
+
+            const block = await fetchBlockByNumber(num)
+            if (!block) {
+
+                console.log(`[❌] Failed to fetch block : ${num}`)
+
+                res(0)
+                return
+
+            }
+
+            const result = await verifyBlock(block)
+            if (result) {
+
+                console.log(`[✅] Processed block : ${num} with ${JSON.stringify(result)}`)
+
+                res(1)
+                return
+
+            }
+
+            console.log(`[❌] Failed to verify block : ${num}`)
+            rej(0)
+
+        })
+    // -- Closure ends here
+
+    const promises = []
+
     for (let i = x; i <= y; i++) {
+        promises.push(processBlockByNumber(i))
+    }
 
-        console.log(`[*] Processing block : ${i}`)
+    try {
 
-        const block = await fetchBlockByNumber(i)
-        if (!block) {
-            continue
-        }
+        await Promise.all(promises)
 
-        await verifyBlock(block)
-        console.log(`[+] Processed block : ${i}`)
+    } catch (e) {
+
+        console.error(e.toString())
 
     }
 
