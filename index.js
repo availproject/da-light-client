@@ -1,5 +1,6 @@
 const { default: axios } = require('axios')
 const { verifyProof } = require('./verifier')
+const { BlockConfidence } = require('./state')
 const humanizeDuration = require('humanize-duration')
 
 const HTTPURI = 'http://localhost:9933'
@@ -7,6 +8,8 @@ const HTTPURI = 'http://localhost:9933'
 const AskProofCount = 10
 const MatrixDimX = 256
 const MatrixDimY = 256
+
+const state = new BlockConfidence()
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
@@ -219,12 +222,18 @@ const processBlocksInRange = async (x, y) => {
             const result = await verifyBlock(block)
             if (result) {
 
+                // Storing confidence gained for block `num`
+                state.confidence = { number: num, confidence: result }
+
                 console.log(`[✅] Processed block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
 
                 res({
                     status: 1,
                     block: num
                 })
+
+                console.log(state.confidence(num))
+
                 return
 
             }
