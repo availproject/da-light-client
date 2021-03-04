@@ -21,7 +21,7 @@ const server = new JSONRPCServer()
 server.addMethod('get_blockConfidence', ({ number }) => {
     return {
         number,
-        confidence: state.getConfidence(number) || 'Not yet computed'
+        confidence: state.getConfidence(number) || '0 %'
     }
 })
 
