@@ -347,8 +347,8 @@ const main = async _ => {
             continue
         }
 
-        await processBlocksInRange(lastSeenBlock + 1, blockNumber)
-        lastSeenBlock = blockNumber
+        await processBlocksInRange(lastSeenBlock + 1, Math.min(blockNumber, lastSeenBlock + 10))
+        lastSeenBlock = Math.min(blockNumber, lastSeenBlock + 10)
 
     }
 
