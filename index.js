@@ -18,7 +18,7 @@ const server = new JSONRPCServer()
 
 // Supported JSON-RPC method, where given block number
 // returns confidence associated with it
-server.addMethod('get_blockConfidence', ({ number }) => {
+server.addMethod('get_blockConfidence', number => {
     return {
         number,
         confidence: state.getConfidence(number)
