@@ -1,6 +1,10 @@
 const { default: axios } = require('axios')
 const { verifyProof } = require('./verifier')
 const { BlockConfidence } = require('./state')
+
+const { JSONRPCServer } = require('json-rpc-2.0')
+const express = require('express')
+
 const humanizeDuration = require('humanize-duration')
 
 const HTTPURI = 'http://localhost:9933'
@@ -10,6 +14,38 @@ const MatrixDimX = 256
 const MatrixDimY = 256
 
 const state = new BlockConfidence()
+const server = new JSONRPCServer()
+
+// Supported JSON-RPC method, where given block number
+// returns confidence associated with it
+server.addMethod('get_blockConfidence', ({ number }) => {
+    return {
+        number,
+        confidence: state.getConfidence(number)
+    }
+})
+
+const app = express()
+app.use(express.json())
+
+app.post('/v1/json-rpc', (req, res) => {
+
+    server.receive(req.body).then((jsonRPCResp) => {
+        if (jsonRPCResp) {
+            res.json(jsonRPCResp)
+        } else {
+            res.sendStatus(204)
+        }
+    })
+
+})
+
+// Starting JSON-RPC server
+app.listen(process.env.PORT || 7000, _ => {
+
+    console.log(`[✅] Running JSON-RPC server @ http://localhost:${process.env.PORT || 7000}`)
+
+})
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not

@@ -19,8 +19,12 @@
   "homepage": "https://github.com/maticnetwork/da-light-client#readme",
   "dependencies": {
     "axios": "^0.21.1",
+    "express": "^4.17.1",
     "ffi-napi": "^4.0.1",
     "humanize-duration": "^3.25.1",
+    "i": "^0.3.6",
+    "json-rpc-2.0": "^0.2.15",
+    "npm": "^7.6.0",
     "ref-array-di": "^1.2.2"
   }
 }
