@@ -9,7 +9,13 @@ class BlockConfidence {
     }
 
     getConfidence(number) {
-        return this.blocks[number]
+
+        if (number in this.blocks) {
+            return `${(this.blocks[number].true * 100) / (this.blocks[number].true + this.blocks[number].false)} %`
+        }
+
+        return null
+
     }
 
 }
