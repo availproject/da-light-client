@@ -30,6 +30,8 @@ app.use(express.json())
 
 app.post('/v1/json-rpc', (req, res) => {
 
+    console.log(`[⚡️] Received JSON-RPC request from ${req.ip} at ${new Date().toISOString()}`)
+
     server.receive(req.body).then((jsonRPCResp) => {
         if (jsonRPCResp) {
             res.json(jsonRPCResp)
