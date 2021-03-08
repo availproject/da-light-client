@@ -33,6 +33,7 @@ Environment Variable | Interpretation
 --- | ---
 HTTPURI | HTTP URI for making RPC calls to a full node
 AskProofCount | For each new block seen by light client, it'll ask for these many proofs & verify those
+BatchSize | At max this many blocks to be attempted to be verified, asynchronously, in a single go
 PORT | Light client exposes RPC server over HTTP, at this port number
 
 - Now, let's run light client
