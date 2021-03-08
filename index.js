@@ -4,6 +4,7 @@ const { BlockConfidence } = require('./state')
 
 const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
+const cors = require('cors')
 
 const humanizeDuration = require('humanize-duration')
 
@@ -44,6 +45,7 @@ server.addMethod('get_blockConfidence', ({ number }) => {
 
 const app = express()
 app.use(express.json())
+app.use(cors())
 
 app.post('/v1/json-rpc', (req, res) => {
 
@@ -357,8 +359,7 @@ const main = async _ => {
 
         const block = await getLatestBlockHeader()
         if (!block) {
-            sleep(3000)
-            continue
+            throw Error('Failed to get latest block number')
         }
 
         // Parse block number in hex string format
