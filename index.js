@@ -20,13 +20,24 @@ const MatrixDimY = 256
 const state = new BlockConfidence()
 const server = new JSONRPCServer()
 
-// Supported JSON-RPC method, where given block number
+// Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
 // returns confidence associated with it
 server.addMethod('get_blockConfidence', ({ number }) => {
-    return {
-        number,
-        confidence: state.getConfidence(number) || '0 %'
-    }
+    return typeof number === 'string' ?
+        {
+            number,
+            confidence: state.getConfidence(number) || '0 %'
+        } :
+        typeof number === 'number' ?
+            {
+                number,
+                confidence: state.getConfidence(number.toString()) || '0 %'
+            } :
+            {
+                number,
+                confidence: '0 %',
+                error: 'Block number must be number/ string'
+            }
 })
 
 const app = express()
@@ -90,7 +101,10 @@ const getLatestBlockHeader = async _ => {
 
 }
 
-// Given block number, get block hash
+// Given block number ( as string ), get block hash
+//
+// @note First need to parse block number as integer, otherwise
+// RPC call fails
 const fetchBlockHashByNumber = async num => {
 
     try {
@@ -100,7 +114,7 @@ const fetchBlockHashByNumber = async num => {
                 "id": 1,
                 "jsonrpc": "2.0",
                 "method": "chain_getBlockHash",
-                "params": [num]
+                "params": [parseInt(num)]
             },
             {
                 headers: {
@@ -246,12 +260,10 @@ const processBlocksInRange = async (x, y) => {
 
             const start = new Date().getTime()
 
-            console.log(`[🛠] Processing block : ${num}`)
+            console.log(`[🛠] Verifying block : ${num}`)
 
-            const block = await fetchBlockByNumber(num)
+            const block = await fetchBlockByNumber(num.toString())
             if (!block) {
-
-                console.log()
 
                 res({
                     status: 0,
@@ -265,15 +277,14 @@ const processBlocksInRange = async (x, y) => {
             if (result) {
 
                 // Storing confidence gained for block `num`
-                state.setConfidence(num, result)
+                state.setConfidence(num.toString(), result)
 
-                console.log(`[✅] Processed block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
+                console.log(`[✅] Verified block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
 
                 res({
                     status: 1,
                     block: num
                 })
-
                 return
 
             }
@@ -289,7 +300,7 @@ const processBlocksInRange = async (x, y) => {
 
     const promises = []
 
-    for (let i = x; i <= y; i++) {
+    for (let i = x; i <= y; i += 1n) {
         promises.push(processBlockByNumber(i))
     }
 
@@ -306,13 +317,13 @@ const processBlocksInRange = async (x, y) => {
 
         if (result[1].length != 0) {
 
-            console.log(`[✅] Processed + Verified ${result[1].length} block(s) in ${humanizeDuration(new Date().getTime() - start)}`)
+            console.log(`[✅] Verified ${result[1].length} block(s) in ${humanizeDuration(new Date().getTime() - start)}`)
 
         }
 
         if (result[0].length != 0) {
 
-            console.log(`[❌] Failed to Process + Verify ${result[0].length} block(s) 👇`)
+            console.log(`[❌] Failed to verify ${result[0].length} block(s) 👇`)
             console.log(result[0])
 
         }
@@ -330,10 +341,15 @@ const sleep = t => {
     setTimeout(_ => { }, t)
 }
 
+// Compare two big intergers & return minimum of them
+const min = (a, b) => {
+    return a < b ? a : b
+}
+
 // Main entry point, to be invoked for starting light client ops
 const main = async _ => {
 
-    let lastSeenBlock = 0
+    let lastSeenBlock = BigInt(0)
 
     while (1) {
 
@@ -344,15 +360,20 @@ const main = async _ => {
         }
 
         // Parse block number in hex string format
-        const blockNumber = parseInt(block.number)
+        const blockNumber = BigInt(block.number)
 
         if (!(lastSeenBlock < blockNumber)) {
             sleep(6000)
             continue
         }
 
-        await processBlocksInRange(lastSeenBlock + 1, Math.min(blockNumber, lastSeenBlock + 10))
-        lastSeenBlock = Math.min(blockNumber, lastSeenBlock + 10)
+        // -- Start block verification
+        const start = lastSeenBlock + 1n
+        const stop = min(blockNumber, lastSeenBlock + 10n)
+        // -- End block verification, where both ends are inclusive
+
+        await processBlocksInRange(start, stop)
+        lastSeenBlock = stop
 
     }
 
