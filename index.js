@@ -281,7 +281,7 @@ const processBlocksInRange = async (x, y) => {
             if (result) {
 
                 // Storing confidence gained for block `num`
-                state.setConfidence(num.toString(), result.true)
+                state.setConfidence(num.toString(), result['true'])
 
                 console.log(`[✅] Verified block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
 
