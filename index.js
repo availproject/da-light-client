@@ -29,12 +29,12 @@ server.addMethod('get_blockConfidence', ({ number }) => {
     return typeof number === 'string' ?
         {
             number,
-            confidence: state.getConfidence(number) || '0 %'
+            confidence: state.getConfidence(number)
         } :
         typeof number === 'number' ?
             {
                 number,
-                confidence: state.getConfidence(number.toString()) || '0 %'
+                confidence: state.getConfidence(number.toString())
             } :
             {
                 number,
@@ -281,7 +281,7 @@ const processBlocksInRange = async (x, y) => {
             if (result) {
 
                 // Storing confidence gained for block `num`
-                state.setConfidence(num.toString(), result)
+                state.setConfidence(num.toString(), result.true)
 
                 console.log(`[✅] Verified block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
 
