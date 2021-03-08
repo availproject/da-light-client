@@ -2,6 +2,7 @@ class BlockConfidence {
 
     constructor() {
         this.blocks = {}
+        this.total = process.env.AskProofCount || 10
     }
 
     setConfidence(number, confidence) {
@@ -9,13 +10,7 @@ class BlockConfidence {
     }
 
     getConfidence(number) {
-
-        if (number in this.blocks) {
-            return `${(this.blocks[number].true * 100) / (this.blocks[number].true + this.blocks[number].false)} %`
-        }
-
-        return null
-
+        return `${(this.blocks[number] || 0 * 100) / this.total} %`
     }
 
 }
