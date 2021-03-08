@@ -7,9 +7,13 @@ const express = require('express')
 
 const humanizeDuration = require('humanize-duration')
 
-const HTTPURI = 'http://localhost:9933'
+// -- Reading config file in memory
+const { join } = require('path')
+require('dotenv').config({ path: join(__dirname, '.env') })
 
-const AskProofCount = 10
+const HTTPURI = process.env.HTTPURI || 'http://localhost:9933'
+const AskProofCount = process.env.AskProofCount || 10
+const port = process.env.PORT || 7000
 const MatrixDimX = 256
 const MatrixDimY = 256
 
@@ -43,9 +47,9 @@ app.post('/v1/json-rpc', (req, res) => {
 })
 
 // Starting JSON-RPC server
-app.listen(process.env.PORT || 7000, _ => {
+app.listen(port, _ => {
 
-    console.log(`[✅] Running JSON-RPC server @ http://localhost:${process.env.PORT || 7000}`)
+    console.log(`[✅] Running JSON-RPC server @ http://localhost:${port}`)
 
 })
 
