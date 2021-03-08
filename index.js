@@ -13,7 +13,9 @@ require('dotenv').config({ path: join(__dirname, '.env') })
 
 const HTTPURI = process.env.HTTPURI || 'http://localhost:9933'
 const AskProofCount = process.env.AskProofCount || 10
+const BatchSize = BigInt(process.env.BatchSize || 10)
 const port = process.env.PORT || 7000
+
 const MatrixDimX = 256
 const MatrixDimY = 256
 
@@ -369,7 +371,7 @@ const main = async _ => {
 
         // -- Start block verification
         const start = lastSeenBlock + 1n
-        const stop = min(blockNumber, lastSeenBlock + 10n)
+        const stop = min(blockNumber, lastSeenBlock + BatchSize)
         // -- End block verification, where both ends are inclusive
 
         await processBlocksInRange(start, stop)

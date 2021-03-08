@@ -25,6 +25,7 @@ touch .env
 ```
 HTTPURI=http://localhost:9933
 AskProofCount=10
+BatchSize=10
 PORT=7000
 ```
 
