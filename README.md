@@ -56,7 +56,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "id": 1,
   "result": {
     "number": 223,
-    "confidence": "100 %"
+    "confidence": "99.99223 %"
   }
 }
 ```
@@ -79,6 +79,6 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
 }
 ```
 
-> Note : You'll receive `0 %` in response, when no confidence is yet gained for requested block.
+> Note : You'll receive `0 %` in response, when no verification is yet done for requested block.
 
 **More info coming ...**

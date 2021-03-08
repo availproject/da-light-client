@@ -223,30 +223,25 @@ const verifyBlock = async block => {
     const blockNumber = block.block.header.number
     const commitment = block.block.header.extrinsicsRoot.commitment
 
-    const _promises = []
-
     for (let i = 0; i < AskProofCount; i++) {
 
         const [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
 
-        _promises.push(singleIterationOfVerification(blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48)))
+        try {
+
+            const ret = await singleIterationOfVerification(blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48))
+
+            if (ret) {
+                state.incrementConfidence(BigInt(blockNumber).toString())
+            }
+
+        } catch (e) {
+            console.log(`[❌] Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
+        }
 
     }
 
-    try {
-
-        // Waiting for all verifications to finish
-        const status = (await Promise.all(_promises))
-            .reduce((acc, cur) => { acc[cur]++; return acc; }, { true: 0, false: 0 })
-
-        return status
-
-    } catch (e) {
-
-        console.error(e.toString())
-        return null
-
-    }
+    return
 
 }
 
@@ -277,25 +272,11 @@ const processBlocksInRange = async (x, y) => {
 
             }
 
-            const result = await verifyBlock(block)
-            if (result) {
+            await verifyBlock(block)
 
-                // Storing confidence gained for block `num`
-                state.setConfidence(num.toString(), result['true'])
-
-                console.log(`[✅] Verified block : ${num} with ${JSON.stringify(result)} in ${humanizeDuration(new Date().getTime() - start)}`)
-
-                res({
-                    status: 1,
-                    block: num
-                })
-                return
-
-            }
-
-            console.log(`[❌] Failed to verify block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
+            console.log(`[✅] Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
             res({
-                status: 0,
+                status: 1,
                 block: num
             })
 
