@@ -42,7 +42,7 @@ make run
 
 ## Usage
 
-Given block number returns confidence obtained by light client for this block number
+Given block number ( as decimal number/ string ) returns confidence obtained by light client for this block
 
 ```bash
 curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_blockConfidence","params": {"number": 223}, "id": 1}' http://localhost:7000/v1/json-rpc | jq
@@ -55,6 +55,24 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "result": {
     "number": 223,
     "confidence": "100 %"
+  }
+}
+```
+
+For malformed block numbers, following will be responded with
+
+```bash
+curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_blockConfidence","params": {"number": true}, "id": 1}' http://localhost:7000/v1/json-rpc | jq # Block number is intentionally sent as `boolean`
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "number": true,
+    "confidence": "0 %",
+    "error": "Block number must be number/ string"
   }
 }
 ```
