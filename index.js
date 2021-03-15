@@ -320,11 +320,14 @@ const subscribeToBlockHead = async _ => {
                 return
             }
 
-            await verifyBlock(header.number, header.extrinsicsRoot.commitment)
-            return
         }
 
+        const start = new Date().getTime()
+        console.log(`🛠  Verifying block : ${header.number}`)
+
         await verifyBlock(header.number, header.extrinsicsRoot.commitment)
+
+        console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
 
     })
 
