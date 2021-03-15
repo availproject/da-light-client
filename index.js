@@ -1,3 +1,4 @@
+const { ApiPromise, WsProvider } = require('@polkadot/api')
 const { default: axios } = require('axios')
 const { verifyProof } = require('./verifier')
 const { BlockConfidence } = require('./state')
@@ -13,6 +14,7 @@ const { join } = require('path')
 require('dotenv').config({ path: join(__dirname, '.env') })
 
 const HTTPURI = process.env.HTTPURI || 'http://localhost:9933'
+const WSURI = process.env.WSURI || 'ws://localhost:9944'
 const AskProofCount = process.env.AskProofCount || 10
 const BatchSize = BigInt(process.env.BatchSize || 10)
 const port = process.env.PORT || 7000
@@ -49,7 +51,7 @@ app.use(cors())
 
 app.post('/v1/json-rpc', (req, res) => {
 
-    console.log(`[⚡️] Received JSON-RPC request from ${req.ip} at ${new Date().toISOString()}`)
+    console.log(`⚡️ Received JSON-RPC request from ${req.ip} at ${new Date().toISOString()}`)
 
     server.receive(req.body).then((jsonRPCResp) => {
         if (jsonRPCResp) {
@@ -64,7 +66,7 @@ app.post('/v1/json-rpc', (req, res) => {
 // Starting JSON-RPC server
 app.listen(port, _ => {
 
-    console.log(`[✅] Running JSON-RPC server @ http://localhost:${port}`)
+    console.log(`✅ Running JSON-RPC server @ http://localhost:${port}`)
 
 })
 
@@ -203,7 +205,7 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
 
             if (proof.status != 200) {
 
-                rej(new Error('Bad status code'))
+                rej(new Error('bad status code'))
 
             }
 
@@ -236,7 +238,7 @@ const verifyBlock = async block => {
             }
 
         } catch (e) {
-            console.log(`[❌] Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
+            console.log(`❌ Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
         }
 
     }
@@ -245,85 +247,87 @@ const verifyBlock = async block => {
 
 }
 
-// Given block number range, fetches all of them & attempts to
-// verify each of them
-const processBlocksInRange = async (x, y) => {
-
-    // -- Starts here
-    //
-    // Closure for fetching single block & attempting
-    // to verify block by asking for proof `N` times
-    // where block number is given
-    const processBlockByNumber = num =>
-        new Promise(async (res, rej) => {
-
-            const start = new Date().getTime()
-
-            console.log(`[🛠] Verifying block : ${num}`)
-
-            const block = await fetchBlockByNumber(num.toString())
-            if (!block) {
-
-                res({
-                    status: 0,
-                    block: num
-                })
-                return
-
-            }
-
-            await verifyBlock(block)
-
-            console.log(`[✅] Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
-            res({
-                status: 1,
-                block: num
-            })
-
-        })
-    // -- Closure ends here
-
-    const promises = []
-
-    for (let i = x; i <= y; i += 1n) {
-        promises.push(processBlockByNumber(i))
-    }
-
-    try {
+// Function for fetching single block & attempting
+// to verify block by asking for proof `N` times
+// where block number is given
+const processBlockByNumber = num =>
+    new Promise(async (res, _) => {
 
         const start = new Date().getTime()
 
-        const result = (await Promise.all(promises)).reduce((acc, cur) => {
+        console.log(`🛠  Verifying block : ${num}`)
 
-            acc[cur.status].push(cur.block)
-            return acc
+        const block = await fetchBlockByNumber(num.toString())
+        if (!block) {
 
-        }, { 0: [], 1: [] })
-
-        if (result[1].length != 0) {
-
-            console.log(`[✅] Verified ${result[1].length} block(s) in ${humanizeDuration(new Date().getTime() - start)}`)
-
-        }
-
-        if (result[0].length != 0) {
-
-            console.log(`[❌] Failed to verify ${result[0].length} block(s) 👇`)
-            console.log(result[0])
+            res({
+                status: 0,
+                block: num
+            })
+            return
 
         }
 
-    } catch (e) {
+        await verifyBlock(block)
 
-        console.error(e.toString())
+        console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
+        res({
+            status: 1,
+            block: num
+        })
+
+    })
+
+// Given block number range, fetches all of them & attempts to
+// verify each of them, where in each iteration it'll process `N`
+// many block(s) & attempt to gain confiidence, by performing a set of
+// proof query & verification rounds
+const processBlocksInRange = async (x, y) => {
+
+    const target = y - x + 1n
+    let covered = 0n
+
+    while (covered <= target) {
+
+        const promises = []
+
+        for (let i = x + covered; i <= min(x + covered + BatchSize - 1n, y); i += 1n) {
+            promises.push(processBlockByNumber(i))
+        }
+
+        try {
+
+            const start = new Date().getTime()
+
+            const result = (await Promise.all(promises)).reduce((acc, cur) => {
+
+                acc[cur.status].push(cur.block)
+                return acc
+
+            }, { 0: [], 1: [] })
+
+            if (result[1].length != 0) {
+
+                console.log(`✅ Batch verified ${result[1].length} block(s) in ${humanizeDuration(new Date().getTime() - start)}`)
+
+            }
+
+            if (result[0].length != 0) {
+
+                console.log(`❌ Failed to batch verify ${result[0].length} block(s) 👇`)
+                console.log(result[0])
+
+            }
+
+        } catch (e) {
+            console.error(e.toString())
+        } finally {
+            covered += (BatchSize + 1n)
+        }
 
     }
 
-}
 
-// Sleep for `t` millisecond
-const sleep = t => {
-    setTimeout(_ => { }, t)
 }
 
 // Compare two big intergers & return minimum of them
@@ -331,37 +335,55 @@ const min = (a, b) => {
     return a < b ? a : b
 }
 
-// Main entry point, to be invoked for starting light client ops
-const main = async _ => {
+// Subscribing to chain tip & attempt to run
+// block verification and confidence gaining life cycle
+// for each block seen/ mined in chain
+const subscribeToBlockHead = async _ => {
 
-    let lastSeenBlock = BigInt(0)
+    const provider = new WsProvider(WSURI)
 
-    while (1) {
+    const api = await ApiPromise.create({
+        provider, types: {
+            ExtrinsicsRoot: {
+                hash: 'Hash',
+                commitment: 'Vec<u8>'
+            },
+            Header: {
+                parentHash: 'Hash',
+                number: 'Compact<BlockNumber>',
+                stateRoot: 'Hash',
+                extrinsicsRoot: 'ExtrinsicsRoot',
+                digest: 'Digest'
+            }
+        }
+    })
 
-        const block = await getLatestBlockHeader()
-        if (!block) {
-            throw Error('Failed to get latest block number')
+    let first = true
+
+    api.rpc.chain.subscribeNewHeads(async header => {
+
+        console.log(`🚀  Chain tip @ ${header.number}`)
+
+        if (first) {
+
+            first = !first
+            if (header.number > 1) {
+                processBlocksInRange(1n, BigInt(header.number))
+                return
+            }
+
+            await processBlockByNumber(BigInt(header.number))
+            return
         }
 
-        // Parse block number in hex string format
-        const blockNumber = BigInt(block.number)
+        await processBlockByNumber(BigInt(header.number))
 
-        if (!(lastSeenBlock < blockNumber)) {
-            sleep(6000)
-            continue
-        }
-
-        // -- Start block verification
-        const start = lastSeenBlock + 1n
-        const stop = min(blockNumber, lastSeenBlock + BatchSize)
-        // -- End block verification, where both ends are inclusive
-
-        await processBlocksInRange(start, stop)
-        lastSeenBlock = stop
-
-    }
+    })
 
 }
+
+// Main entry point, to be invoked for starting light client ops
+const main = _ => subscribeToBlockHead()
 
 main().catch(e => {
     console.error(e)
