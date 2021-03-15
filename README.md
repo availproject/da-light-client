@@ -1,6 +1,6 @@
 # da-light-client
 
-Light client for Data Availibility Blockchain of Polygon 🐿
+Light client for Data Availability Blockchain of Polygon 🐿
 
 ![banner](./sc/banner.png)
 
