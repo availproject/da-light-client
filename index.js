@@ -1,4 +1,6 @@
 const { ApiPromise, WsProvider } = require('@polkadot/api')
+let api
+
 const { default: axios } = require('axios')
 const { verifyProof } = require('./verifier')
 const { BlockConfidence } = require('./state')
@@ -115,21 +117,8 @@ const fetchBlockHashByNumber = async num => {
 
     try {
 
-        const blockHash = await axios.post(HTTPURI,
-            {
-                "id": 1,
-                "jsonrpc": "2.0",
-                "method": "chain_getBlockHash",
-                "params": [parseInt(num)]
-            },
-            {
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            }
-        )
-
-        return 'result' in blockHash.data ? blockHash.data.result : null
+        const blockHash = await api.rpc.chain.getBlockHash(parseInt(num))
+        return blockHash.toHex()
 
     } catch (e) {
 
@@ -335,14 +324,11 @@ const min = (a, b) => {
     return a < b ? a : b
 }
 
-// Subscribing to chain tip & attempt to run
-// block verification and confidence gaining life cycle
-// for each block seen/ mined in chain
-const subscribeToBlockHead = async _ => {
+const setUp = async _ => {
 
     const provider = new WsProvider(WSURI)
 
-    const api = await ApiPromise.create({
+    api = await ApiPromise.create({
         provider, types: {
             ExtrinsicsRoot: {
                 hash: 'Hash',
@@ -357,6 +343,13 @@ const subscribeToBlockHead = async _ => {
             }
         }
     })
+
+}
+
+// Subscribing to chain tip & attempt to run
+// block verification and confidence gaining life cycle
+// for each block seen/ mined in chain
+const subscribeToBlockHead = async _ => {
 
     let first = true
 
@@ -383,7 +376,10 @@ const subscribeToBlockHead = async _ => {
 }
 
 // Main entry point, to be invoked for starting light client ops
-const main = _ => subscribeToBlockHead()
+const main = async _ => {
+    await setUp()
+    subscribeToBlockHead()
+}
 
 main().catch(e => {
     console.error(e)
