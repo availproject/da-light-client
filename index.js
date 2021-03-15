@@ -6,15 +6,12 @@ require('dotenv').config({ path: join(__dirname, '.env') })
 //
 // @note Kept in global scope intensionally, to avoid
 // passing to all functions, who will potentially make use of it
-let api
-
-const { default: axios } = require('axios')
-const { verifyProof } = require('./src/verifier')
-const { BlockConfidence } = require('./src/state')
-const { startServer } = require('./src/rpc')
-const { max, setUp } = require('./src/utils')
+let state, api
 
 const humanizeDuration = require('humanize-duration')
+const { default: axios } = require('axios')
+const { verifyProof } = require('./src/verifier')
+const { getRandomInt, max, setUp } = require('./src/utils')
 
 const HTTPURI = process.env.HTTPURI || 'http://localhost:9933'
 const AskProofCount = process.env.AskProofCount || 10
@@ -23,16 +20,6 @@ const BatchSize = BigInt(process.env.BatchSize || 10)
 const MatrixDimX = 256
 const MatrixDimY = 256
 
-const state = new BlockConfidence()
-startServer(state)
-
-// Return random integer in specified range
-// where lower bound is inclusive, but other end is not
-const getRandomInt = (low, high) => {
-
-    return Math.floor(Math.random() * (high - low)) + low
-
-}
 
 // Given block number ( as string ), get block hash
 //
@@ -262,7 +249,7 @@ const startLightClient = async _ => {
 
 // Main entry point, to be invoked for starting light client ops
 const main = async _ => {
-    api = await setUp()
+    [state, api] = await setUp()
     startLightClient()
 }
 
