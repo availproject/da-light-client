@@ -80,39 +80,10 @@ const getRandomInt = (low, high) => {
 
 }
 
-// Query for latest block header, in case of failure returns `null`
-const getLatestBlockHeader = async _ => {
-
-    try {
-
-        const blockHeader = await axios.post(HTTPURI,
-            {
-                "id": 1,
-                "jsonrpc": "2.0",
-                "method": "chain_getHeader"
-            },
-            {
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            }
-        )
-
-        return 'result' in blockHeader.data ? blockHeader.data.result : null
-
-    } catch (e) {
-
-        console.error(e.toString())
-        return null
-
-    }
-
-}
-
 // Given block number ( as string ), get block hash
 //
 // @note First need to parse block number as integer, otherwise
-// RPC call fails
+// RPC call fails, cause it's given as BigInt
 const fetchBlockHashByNumber = async num => {
 
     try {
@@ -134,21 +105,8 @@ const fetchBlockByHash = async hash => {
 
     try {
 
-        const blockHeader = await axios.post(HTTPURI,
-            {
-                "id": 1,
-                "jsonrpc": "2.0",
-                "method": "chain_getBlock",
-                "params": [hash]
-            },
-            {
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            }
-        )
-
-        return 'result' in blockHeader.data ? blockHeader.data.result : null
+        const block = await api.rpc.chain.getBlock(hash)
+        return block
 
     } catch (e) {
 
@@ -198,7 +156,7 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
 
             }
 
-            res(verifyProof(x, y, commitment, proof.data.result))
+            res(verifyProof(x, y, [...commitment], proof.data.result))
 
         } catch (e) {
             rej(e)
@@ -324,6 +282,8 @@ const min = (a, b) => {
     return a < b ? a : b
 }
 
+// Initialised Polkadot API, which is to be used
+// for interacting with node RPC API
 const setUp = async _ => {
 
     const provider = new WsProvider(WSURI)
