@@ -167,10 +167,7 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
 // Given a block, which is already fetched, attempts to
 // verify block content by checking commitment & proof asked by
 // cell indices
-const verifyBlock = async block => {
-
-    const blockNumber = block.block.header.number
-    const commitment = block.block.header.extrinsicsRoot.commitment
+const verifyBlock = async (blockNumber, commitment) => {
 
     for (let i = 0; i < AskProofCount; i++) {
 
@@ -189,8 +186,6 @@ const verifyBlock = async block => {
         }
 
     }
-
-    return
 
 }
 
@@ -215,7 +210,7 @@ const processBlockByNumber = num =>
 
         }
 
-        await verifyBlock(block)
+        await verifyBlock(block.block.header.number, block.block.header.extrinsicsRoot.commitment)
 
         console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
         res({
@@ -325,11 +320,11 @@ const subscribeToBlockHead = async _ => {
                 return
             }
 
-            await processBlockByNumber(BigInt(header.number))
+            await verifyBlock(header.number, header.extrinsicsRoot.commitment)
             return
         }
 
-        await processBlockByNumber(BigInt(header.number))
+        await verifyBlock(header.number, header.extrinsicsRoot.commitment)
 
     })
 
