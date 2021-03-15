@@ -171,11 +171,14 @@ const verifyBlock = async (blockNumber, commitment) => {
 
     for (let i = 0; i < AskProofCount; i++) {
 
+        const start = new Date().getTime()
         const [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
 
         try {
 
             const ret = await singleIterationOfVerification(blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48))
+
+            console.info(ret ? `➕  Verified proof for cell (${x}, ${y}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}` : `➖  Failed to verify proof for cell (${x}, ${y}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}`)
 
             if (ret) {
                 state.incrementConfidence(BigInt(blockNumber).toString())
@@ -197,7 +200,7 @@ const processBlockByNumber = num =>
 
         const start = new Date().getTime()
 
-        console.log(`🛠  Verifying block : ${num}`)
+        console.log(`🛠   Verifying block : ${num}`)
 
         const block = await fetchBlockByNumber(num.toString())
         if (!block) {
@@ -269,7 +272,6 @@ const processBlocksInRange = async (x, y) => {
 
     }
 
-
 }
 
 // Compare two big intergers & return minimum of them
@@ -323,7 +325,7 @@ const subscribeToBlockHead = async _ => {
         }
 
         const start = new Date().getTime()
-        console.log(`🛠  Verifying block : ${header.number}`)
+        console.log(`🛠   Verifying block : ${header.number}`)
 
         await verifyBlock(header.number, header.extrinsicsRoot.commitment)
 
