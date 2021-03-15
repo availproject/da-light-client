@@ -1,76 +1,30 @@
-const { ApiPromise, WsProvider } = require('@polkadot/api')
-let api
-
-const { default: axios } = require('axios')
-const { verifyProof } = require('./verifier')
-const { BlockConfidence } = require('./state')
-
-const { JSONRPCServer } = require('json-rpc-2.0')
-const express = require('express')
-const cors = require('cors')
-
-const humanizeDuration = require('humanize-duration')
-
 // -- Reading config file in memory
 const { join } = require('path')
 require('dotenv').config({ path: join(__dirname, '.env') })
 
+// To be initialised at some later point of time
+//
+// @note Kept in global scope intensionally, to avoid
+// passing to all functions, who will potentially make use of it
+let api
+
+const { default: axios } = require('axios')
+const { verifyProof } = require('./src/verifier')
+const { BlockConfidence } = require('./src/state')
+const { startServer } = require('./src/rpc')
+const { max, setUp } = require('./src/utils')
+
+const humanizeDuration = require('humanize-duration')
+
 const HTTPURI = process.env.HTTPURI || 'http://localhost:9933'
-const WSURI = process.env.WSURI || 'ws://localhost:9944'
 const AskProofCount = process.env.AskProofCount || 10
 const BatchSize = BigInt(process.env.BatchSize || 10)
-const port = process.env.PORT || 7000
 
 const MatrixDimX = 256
 const MatrixDimY = 256
 
 const state = new BlockConfidence()
-const server = new JSONRPCServer()
-
-// Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
-// returns confidence associated with it
-server.addMethod('get_blockConfidence', ({ number }) => {
-    return typeof number === 'string' ?
-        {
-            number,
-            confidence: state.getConfidence(number)
-        } :
-        typeof number === 'number' ?
-            {
-                number,
-                confidence: state.getConfidence(number.toString())
-            } :
-            {
-                number,
-                confidence: '0 %',
-                error: 'Block number must be number/ string'
-            }
-})
-
-const app = express()
-app.use(express.json())
-app.use(cors())
-
-app.post('/v1/json-rpc', (req, res) => {
-
-    console.log(`⚡️ Received JSON-RPC request from ${req.ip} at ${new Date().toISOString()}`)
-
-    server.receive(req.body).then((jsonRPCResp) => {
-        if (jsonRPCResp) {
-            res.json(jsonRPCResp)
-        } else {
-            res.sendStatus(204)
-        }
-    })
-
-})
-
-// Starting JSON-RPC server
-app.listen(port, _ => {
-
-    console.log(`✅ Running JSON-RPC server @ http://localhost:${port}`)
-
-})
+startServer(state)
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
@@ -274,45 +228,10 @@ const processBlocksInRange = async (x, y) => {
 
 }
 
-// Compare two big intergers & return maximum of them
-const max = (a, b) => {
-    return a > b ? a : b
-}
-
-
-// Compare two big intergers & return minimum of them
-const min = (a, b) => {
-    return a < b ? a : b
-}
-
-// Initialised Polkadot API, which is to be used
-// for interacting with node RPC API
-const setUp = async _ => {
-
-    const provider = new WsProvider(WSURI)
-
-    api = await ApiPromise.create({
-        provider, types: {
-            ExtrinsicsRoot: {
-                hash: 'Hash',
-                commitment: 'Vec<u8>'
-            },
-            Header: {
-                parentHash: 'Hash',
-                number: 'Compact<BlockNumber>',
-                stateRoot: 'Hash',
-                extrinsicsRoot: 'ExtrinsicsRoot',
-                digest: 'Digest'
-            }
-        }
-    })
-
-}
-
 // Subscribing to chain tip & attempt to run
 // block verification and confidence gaining life cycle
 // for each block seen/ mined in chain
-const subscribeToBlockHead = async _ => {
+const startLightClient = async _ => {
 
     let first = true
 
@@ -343,8 +262,8 @@ const subscribeToBlockHead = async _ => {
 
 // Main entry point, to be invoked for starting light client ops
 const main = async _ => {
-    await setUp()
-    subscribeToBlockHead()
+    api = await setUp()
+    startLightClient()
 }
 
 main().catch(e => {
