@@ -27,7 +27,7 @@ touch .env
 ```
 
 ```
-WSURI=ws://localhost:9933
+WSURI=ws://localhost:9944
 HTTPURI=http://localhost:9933
 AskProofCount=15
 BatchSize=10
