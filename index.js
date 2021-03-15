@@ -236,7 +236,7 @@ const processBlocksInRange = async (x, y) => {
 
         const promises = []
 
-        for (let i = x + covered; i <= min(x + covered + BatchSize - 1n, y); i += 1n) {
+        for (let i = y - covered; i >= max(y - covered - BatchSize + 1n, x); i -= 1n) {
             promises.push(processBlockByNumber(i))
         }
 
@@ -273,6 +273,12 @@ const processBlocksInRange = async (x, y) => {
     }
 
 }
+
+// Compare two big intergers & return maximum of them
+const max = (a, b) => {
+    return a > b ? a : b
+}
+
 
 // Compare two big intergers & return minimum of them
 const min = (a, b) => {
@@ -317,7 +323,7 @@ const subscribeToBlockHead = async _ => {
         if (first) {
 
             first = !first
-            if (header.number > 1) {
+            if (BigInt(header.number) > 1n) {
                 processBlocksInRange(1n, BigInt(header.number))
                 return
             }
