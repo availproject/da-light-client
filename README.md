@@ -1,12 +1,16 @@
 # da-light-client
 
+Light client for Data Availability Blockchain of Polygon 🐿
+
+![banner](./sc/banner.png)
+
 ## Introduction
 
 Naive approach for building one DA light client, which will do following
 
-- Poll for newly mined blocks every `X` second
-- As soon as new block is available, attempts to process block, by fetching commitment provided in header & asking for proof from full client _( via JSON RPC interface )_ for `N` many cells where cell is defined as `{row, col}` pair
-- For each of those `N` many proof(s), attempts to check correctness, eventually gains confidence
+- Listen for newly mined blocks
+- As soon as new block is available, attempts to eventually gain confidence by asking for proof from full client _( via JSON RPC interface )_ for `N` many cells where cell is defined as `{row, col}` pair
+- For lower numbered blocks, for which no confidence is yet gained, does batch processing in reverse order i.e. prioritizing latest blocks over older ones
 
 ## Installation
 
@@ -23,14 +27,17 @@ touch .env
 ```
 
 ```
+WSURI=ws://localhost:9944
 HTTPURI=http://localhost:9933
-AskProofCount=10
+AskProofCount=15
 BatchSize=10
 PORT=7000
+
 ```
 
 Environment Variable | Interpretation
 --- | ---
+WSURI | Light client subcribes to full node, over **Websocket** transport, for receiving notification, as soon as new block gets mined 
 HTTPURI | HTTP URI for making RPC calls to a full node
 AskProofCount | For each new block seen by light client, it'll ask for these many proofs & verify those
 BatchSize | At max this many blocks to be attempted to be verified, asynchronously, in a single go
