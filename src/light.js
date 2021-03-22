@@ -84,10 +84,9 @@ const askProof = (blockNumber, indices) =>
 
     })
 
-// Given a block, which is already fetched, attempts to
-// verify block content by checking commitment & proof asked by
-// cell indices
-const verifyBlock = async (blockNumber, commitment) => {
+
+// Generates random indices, to be used for querying full node for proof(s)
+const generateRandomDataMatrixIndices = _ => {
 
     const indices = []
 
@@ -98,23 +97,31 @@ const verifyBlock = async (blockNumber, commitment) => {
 
     }
 
+    return indices
+
+}
+
+// Given a block, which is already fetched, attempts to
+// verify block content by checking commitment & proof asked by
+// cell indices
+const verifyBlock = async (blockNumber, indices, commitment, proof) => {
+
+
     try {
 
-        const proof = await askProof(blockNumber, indices)
+        (await Promise.all(indices.map(({ row, col }, index) => {
 
-        indices.forEach(async ({ row, col }, index) => {
+            return verifyProof(row, col, commitment.slice(48 * row, row * 48 + 48), proof.slice(80 * index, index * 80 + 80))
 
-            const start = new Date().getTime()
-            const ret = await verifyProof(row, col, commitment.slice(48 * row, row * 48 + 48), proof.slice(80 * index, index * 80 + 80))
+        }))).map((v, i) => {
 
-            console.info(ret ? `➕  Verified proof for cell (${row}, ${col}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}` : `➖  Failed to verify proof for cell (${row}, ${col}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}`)
+            console.info(v ? `➕  Verified proof for cell (${indices[i].row}, ${indices[i].col}) of block ${blockNumber}` : `➖  Failed to verify proof for cell (${indices[i].row}, ${indices[i].col}) of block ${blockNumber}`)
 
-            if (ret) {
+            if (v) {
                 state.incrementConfidence(BigInt(blockNumber).toString())
             }
 
         })
-
 
     } catch (e) {
         console.log(`❌ Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
@@ -123,8 +130,7 @@ const verifyBlock = async (blockNumber, commitment) => {
 }
 
 // Function for fetching single block & attempting
-// to verify block by asking for proof `N` times
-// where block number is given
+// to verify block by asking for `N` proof(s), in a batch call
 const processBlockByNumber = num =>
     new Promise(async (res, _) => {
 
@@ -143,11 +149,26 @@ const processBlockByNumber = num =>
 
         }
 
-        await verifyBlock(block.block.header.number, [...block.block.header.extrinsicsRoot.commitment])
+        const blockNumber = block.block.header.number
+        const indices = generateRandomDataMatrixIndices()
+        const commitment = [...block.block.header.extrinsicsRoot.commitment]
+        const proof = await askProof(blockNumber, indices)
 
-        console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
+        const ret = await verifyBlock(blockNumber, indices, commitment, proof)
+
+        if (ret) {
+
+            console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
+            res({
+                status: 1,
+                block: num
+            })
+            return
+
+        }
+
         res({
-            status: 1,
+            status: 0,
             block: num
         })
 
@@ -157,6 +178,8 @@ const processBlockByNumber = num =>
 // verify each of them, where in each iteration it'll process `N`
 // many block(s) & attempt to gain confiidence, by performing a set of
 // proof query & verification rounds
+//
+// @note Proof asking rounds are now batched into a single RPC call
 const processBlocksInRange = async (x, y) => {
 
     const target = y - x + 1n
@@ -230,9 +253,16 @@ const startLightClient = async _ => {
         const start = new Date().getTime()
         console.log(`🛠   Verifying block : ${header.number}`)
 
-        await verifyBlock(header.number, [...header.extrinsicsRoot.commitment])
+        const blockNumber = header.number
+        const indices = generateRandomDataMatrixIndices()
+        const commitment = [...header.extrinsicsRoot.commitment]
+        const proof = await askProof(blockNumber, indices)
 
-        console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
+        const ret = await verifyBlock(blockNumber, indices, commitment, proof)
+
+        if (ret) {
+            console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
+        }
 
     })
 
