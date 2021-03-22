@@ -28,7 +28,6 @@ touch .env
 
 ```
 WSURI=ws://localhost:9944
-HTTPURI=http://localhost:9933
 AskProofCount=15
 BatchSize=10
 PORT=7000
@@ -37,8 +36,7 @@ PORT=7000
 
 Environment Variable | Interpretation
 --- | ---
-WSURI | Light client subcribes to full node, over **Websocket** transport, for receiving notification, as soon as new block gets mined 
-HTTPURI | HTTP URI for making RPC calls to a full node
+WSURI | Light client subcribes to full node, over **Websocket** transport, for receiving notification, as soon as new block gets mined
 AskProofCount | For each new block seen by light client, it'll ask for these many proofs & verify those
 BatchSize | At max this many blocks to be attempted to be verified, asynchronously, in a single go
 PORT | Light client exposes RPC server over HTTP, at this port number

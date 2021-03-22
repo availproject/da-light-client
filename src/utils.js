@@ -3,6 +3,19 @@ const { BlockConfidence } = require('./state')
 const { startServer } = require('./rpc')
 
 const WSURI = process.env.WSURI || 'ws://localhost:9944'
+const AskProofCount = parseInt(process.env.AskProofCount) || 10
+
+const MatrixDimX = 256
+const MatrixDimY = 256
+
+// Generates random data matrix indices, to be used when querying
+// full node for proofs, for a certain block number
+const generateRandomDataMatrixIndices = _ => [...Array(AskProofCount).keys()].map(_ => {
+    return {
+        row: getRandomInt(0, MatrixDimX),
+        col: getRandomInt(0, MatrixDimY)
+    }
+})
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
@@ -27,7 +40,8 @@ const setUp = async _ => {
     const provider = new WsProvider(WSURI)
 
     let api = await ApiPromise.create({
-        provider, types: {
+        provider,
+        types: {
             ExtrinsicsRoot: {
                 hash: 'Hash',
                 commitment: 'Vec<u8>'
@@ -38,6 +52,28 @@ const setUp = async _ => {
                 stateRoot: 'Hash',
                 extrinsicsRoot: 'ExtrinsicsRoot',
                 digest: 'Digest'
+            },
+            Cell: {
+                row: 'u32',
+                col: 'u32'
+            }
+        },
+        rpc: {
+            kate: {
+                queryProof: {
+                    description: 'Ask for Kate Proof, given block number & data matrix indices',
+                    params: [
+                        {
+                            name: 'blockNumber',
+                            type: 'u64'
+                        },
+                        {
+                            name: 'cells',
+                            type: 'Vec<Cell>'
+                        }
+                    ],
+                    type: 'Vec<u8>'
+                }
             }
         }
     })
@@ -47,5 +83,5 @@ const setUp = async _ => {
 }
 
 module.exports = {
-    getRandomInt, max, setUp
+    max, setUp, generateRandomDataMatrixIndices
 }
