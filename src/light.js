@@ -63,16 +63,20 @@ const fetchBlockByNumber = async num => {
 
 }
 
-// Single cell verification job is submiited in a different thread of
-// worker, using this function
-const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
+// Asking for batch proof i.e. given block number & a set of
+// data matrix indices
+//
+// @note Length of response byte array will be : len(indices) * 80
+//
+// We asked for N-many cell's proof(s) in a batch
+const askProof = (blockNumber, indices) =>
     new Promise(async (res, rej) => {
 
         try {
 
-            const proof = await api.rpc.kate.queryProof(blockNumber, [{ row: x, col: y }])
+            const proof = await api.rpc.kate.queryProof(blockNumber, indices)
 
-            res(verifyProof(x, y, [...commitment], [...proof]))
+            res([...proof])
 
         } catch (e) {
             rej(e)
@@ -85,25 +89,35 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
 // cell indices
 const verifyBlock = async (blockNumber, commitment) => {
 
+    const indices = []
+
     for (let i = 0; i < AskProofCount; i++) {
 
-        const start = new Date().getTime()
-        const [x, y] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
+        const [row, col] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
+        indices.push({ row, col })
 
-        try {
+    }
 
-            const ret = await singleIterationOfVerification(blockNumber, x, y, commitment.slice(48 * x, x * 48 + 48))
+    try {
 
-            console.info(ret ? `➕  Verified proof for cell (${x}, ${y}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}` : `➖  Failed to verify proof for cell (${x}, ${y}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}`)
+        const proof = await askProof(blockNumber, indices)
+
+        indices.forEach(async ({ row, col }, index) => {
+
+            const start = new Date().getTime()
+            const ret = await verifyProof(row, col, commitment.slice(48 * row, row * 48 + 48), proof.slice(80 * index, index * 80 + 80))
+
+            console.info(ret ? `➕  Verified proof for cell (${row}, ${col}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}` : `➖  Failed to verify proof for cell (${row}, ${col}) of block ${blockNumber} in ${humanizeDuration(new Date().getTime() - start)}`)
 
             if (ret) {
                 state.incrementConfidence(BigInt(blockNumber).toString())
             }
 
-        } catch (e) {
-            console.log(`❌ Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
-        }
+        })
 
+
+    } catch (e) {
+        console.log(`❌ Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
     }
 
 }
@@ -129,7 +143,7 @@ const processBlockByNumber = num =>
 
         }
 
-        await verifyBlock(block.block.header.number, block.block.header.extrinsicsRoot.commitment)
+        await verifyBlock(block.block.header.number, [...block.block.header.extrinsicsRoot.commitment])
 
         console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
         res({
@@ -216,7 +230,7 @@ const startLightClient = async _ => {
         const start = new Date().getTime()
         console.log(`🛠   Verifying block : ${header.number}`)
 
-        await verifyBlock(header.number, header.extrinsicsRoot.commitment)
+        await verifyBlock(header.number, [...header.extrinsicsRoot.commitment])
 
         console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
 
