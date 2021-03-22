@@ -1,9 +1,7 @@
 const humanizeDuration = require('humanize-duration')
-const { default: axios } = require('axios')
 const { verifyProof } = require('./verifier')
 const { getRandomInt, max, setUp } = require('./utils')
 
-const HTTPURI = process.env.HTTPURI || 'http://localhost:9933'
 const AskProofCount = process.env.AskProofCount || 10
 const BatchSize = BigInt(process.env.BatchSize || 10)
 
