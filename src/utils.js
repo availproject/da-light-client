@@ -3,6 +3,19 @@ const { BlockConfidence } = require('./state')
 const { startServer } = require('./rpc')
 
 const WSURI = process.env.WSURI || 'ws://localhost:9944'
+const AskProofCount = parseInt(process.env.AskProofCount) || 10
+
+const MatrixDimX = 256
+const MatrixDimY = 256
+
+// Generates random data matrix indices, to be used when querying
+// full node for proofs, for a certain block number
+const generateRandomDataMatrixIndices = _ => [...Array(AskProofCount).keys()].map(_ => {
+    return {
+        row: getRandomInt(0, MatrixDimX),
+        col: getRandomInt(0, MatrixDimY)
+    }
+})
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
@@ -70,5 +83,5 @@ const setUp = async _ => {
 }
 
 module.exports = {
-    getRandomInt, max, setUp
+    max, setUp, generateRandomDataMatrixIndices
 }

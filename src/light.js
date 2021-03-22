@@ -1,12 +1,8 @@
 const humanizeDuration = require('humanize-duration')
 const { verifyProof } = require('./verifier')
-const { getRandomInt, max, setUp } = require('./utils')
+const { max, setUp, generateRandomDataMatrixIndices } = require('./utils')
 
-const AskProofCount = process.env.AskProofCount || 10
 const BatchSize = BigInt(process.env.BatchSize || 10)
-
-const MatrixDimX = 256
-const MatrixDimY = 256
 
 // To be initialised at some later point of time
 //
@@ -84,23 +80,6 @@ const askProof = (blockNumber, indices) =>
 
     })
 
-
-// Generates random indices, to be used for querying full node for proof(s)
-const generateRandomDataMatrixIndices = _ => {
-
-    const indices = []
-
-    for (let i = 0; i < AskProofCount; i++) {
-
-        const [row, col] = [getRandomInt(0, MatrixDimX), getRandomInt(0, MatrixDimY)]
-        indices.push({ row, col })
-
-    }
-
-    return indices
-
-}
-
 // Given a block, which is already fetched, attempts to
 // verify block content by checking commitment & proof asked by
 // cell indices
@@ -115,7 +94,7 @@ const verifyBlock = async (blockNumber, indices, commitment, proof) => {
 
         }))).map((v, i) => {
 
-            console.info(v ? `➕  Verified proof for cell (${indices[i].row}, ${indices[i].col}) of block ${blockNumber}` : `➖  Failed to verify proof for cell (${indices[i].row}, ${indices[i].col}) of block ${blockNumber}`)
+            console.info(v ? `➕  Verified proof : cell (${indices[i].row}, ${indices[i].col}) of #${blockNumber}` : `➖  Failed to verify proof : cell (${indices[i].row}, ${indices[i].col}) of #${blockNumber}`)
 
             if (v) {
                 state.incrementConfidence(BigInt(blockNumber).toString())
@@ -154,21 +133,11 @@ const processBlockByNumber = num =>
         const commitment = [...block.block.header.extrinsicsRoot.commitment]
         const proof = await askProof(blockNumber, indices)
 
-        const ret = await verifyBlock(blockNumber, indices, commitment, proof)
+        await verifyBlock(blockNumber, indices, commitment, proof)
 
-        if (ret) {
-
-            console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
-            res({
-                status: 1,
-                block: num
-            })
-            return
-
-        }
-
+        console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
         res({
-            status: 0,
+            status: 1,
             block: num
         })
 
@@ -258,11 +227,9 @@ const startLightClient = async _ => {
         const commitment = [...header.extrinsicsRoot.commitment]
         const proof = await askProof(blockNumber, indices)
 
-        const ret = await verifyBlock(blockNumber, indices, commitment, proof)
+        await verifyBlock(blockNumber, indices, commitment, proof)
 
-        if (ret) {
-            console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
-        }
+        console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
 
     })
 
