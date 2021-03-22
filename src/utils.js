@@ -27,7 +27,8 @@ const setUp = async _ => {
     const provider = new WsProvider(WSURI)
 
     let api = await ApiPromise.create({
-        provider, types: {
+        provider,
+        types: {
             ExtrinsicsRoot: {
                 hash: 'Hash',
                 commitment: 'Vec<u8>'
@@ -38,6 +39,28 @@ const setUp = async _ => {
                 stateRoot: 'Hash',
                 extrinsicsRoot: 'ExtrinsicsRoot',
                 digest: 'Digest'
+            },
+            Cell: {
+                row: 'u32',
+                col: 'u32'
+            }
+        },
+        rpc: {
+            kate: {
+                queryProof: {
+                    description: 'Ask for Kate Proof, given block number & data matrix indices',
+                    params: [
+                        {
+                            name: 'blockNumber',
+                            type: 'u64'
+                        },
+                        {
+                            name: 'cells',
+                            type: 'Vec<Cell>'
+                        }
+                    ],
+                    type: 'Vec<u8>'
+                }
             }
         }
     })

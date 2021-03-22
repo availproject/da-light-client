@@ -72,27 +72,9 @@ const singleIterationOfVerification = (blockNumber, x, y, commitment) =>
 
         try {
 
-            const proof = await axios.post(HTTPURI,
-                {
-                    "id": 1,
-                    "jsonrpc": "2.0",
-                    "method": "kate_queryProof",
-                    "params": [blockNumber, [{ "row": x, "col": y }]]
-                },
-                {
-                    headers: {
-                        "Content-Type": "application/json"
-                    }
-                }
-            )
+            const proof = await api.rpc.kate.queryProof(blockNumber, [{ row: x, col: y }])
 
-            if (proof.status != 200) {
-
-                rej(new Error('bad status code'))
-
-            }
-
-            res(verifyProof(x, y, [...commitment], proof.data.result))
+            res(verifyProof(x, y, [...commitment], [...proof]))
 
         } catch (e) {
             rej(e)
