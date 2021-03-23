@@ -701,12 +701,29 @@ fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool 
 
 #[no_mangle]
 pub extern "C" fn verify_proof(
-    col: u8,
+    block: u64,
+    rows: *const u8,
+    rows_len: size_t,
+    cols: *const u8,
+    cols_len: size_t,
     c: *const u8,
     c_len: size_t,
     p: *const u8,
     p_len: size_t,
-) -> bool {
+) -> u8 {
+    let rows = (unsafe {
+        assert!(!rows.is_null());
+
+        slice::from_raw_parts(rows, rows_len as usize)
+    })
+    .to_vec();
+
+    let cols = unsafe {
+        assert!(!cols.is_null());
+
+        slice::from_raw_parts(cols, cols_len as usize)
+    };
+
     let commitment = unsafe {
         assert!(!c.is_null());
 
@@ -719,6 +736,26 @@ pub extern "C" fn verify_proof(
         slice::from_raw_parts(p, p_len as usize)
     };
 
-    kc_verify_proof(col, proof.to_vec(), commitment.to_vec())
-    // true
+    let mut results = vec![];
+
+    for (pos, col) in cols.iter().enumerate() {
+        let p_start = pos * 80;
+        let p_end = p_start + 80;
+
+        let _proof = proof.to_vec()[p_start..p_end].to_vec();
+
+        let c_start = usize::from(rows[pos]) * 48;
+        let c_end = c_start + 48;
+
+        let _commitment = commitment.to_vec()[c_start..c_end].to_vec();
+
+        let status = kc_verify_proof(*col, _proof, _commitment);
+        if status {
+            println!("➕  Verified cell ({}, {}) of #{}", usize::from(rows[pos]), col, block);
+        }
+
+        results.push(status);
+    }
+
+    results.iter().filter(|&v| *v).count() as u8
 }
