@@ -713,7 +713,7 @@ fn kc_verify_proof_wrapper(
 ) -> bool {
     let status = kc_verify_proof(col, proof, commitment);
     if status {
-        println!("➕  Verified cell ({:0>3}, {:>3}) of #{}", row, col, block);
+        println!("➕  Verified cell ({:>3}, {:>3}) of #{}", row, col, block);
     }
 
     status
