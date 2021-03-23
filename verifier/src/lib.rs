@@ -2,6 +2,7 @@ extern crate libc;
 
 use libc::size_t;
 use std::slice;
+use std::thread;
 
 use dusk_plonk::bls12_381::G1Affine;
 use dusk_plonk::commitment_scheme::kzg10;
@@ -699,6 +700,23 @@ fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool 
     verifier_key.check(row_dom_x_pts[col_num as usize], proof)
 }
 
+// Just a wrapper function, to be used when spawning threads for verifying proofs
+// for a certain block
+fn kc_verify_proof_wrapper(
+    row: u8,
+    col: u8,
+    block: u64,
+    proof: Vec<u8>,
+    commitment: Vec<u8>,
+) -> bool {
+    let status = kc_verify_proof(col, proof, commitment);
+    if status {
+        println!("➕  Verified cell ({}, {}) of #{}", row, col, block);
+    }
+
+    status
+}
+
 #[no_mangle]
 pub extern "C" fn verify_proof(
     block: u64,
@@ -739,30 +757,36 @@ pub extern "C" fn verify_proof(
     .to_vec();
 
     let mut results = vec![];
+    let mut children = vec![];
 
     for (pos, col) in cols.iter().enumerate() {
+        // -- slicing out relevant proof slice
         let p_start = pos * 80;
         let p_end = p_start + 80;
 
         let _proof = proof[p_start..p_end].to_vec();
+        // -- obtained proof sub slice
 
-        let c_start = usize::from(rows[pos]) * 48;
+        // -- slicing out relevant commitment sub slice
+        let row = usize::from(rows[pos]);
+        let c_start = row * 48;
         let c_end = c_start + 48;
 
         let _commitment = commitment[c_start..c_end].to_vec();
+        // -- obtained commitment subslice of interest, for specific (row, col) i.e. cell
 
-        let status = kc_verify_proof(*col, _proof, _commitment);
-        if status {
-            println!(
-                "➕  Verified cell ({}, {}) of #{}",
-                usize::from(rows[pos]),
-                col,
-                block
-            );
-        }
-
-        results.push(status);
+        // spawning threads of workers
+        children.push(thread::spawn(move || {
+            kc_verify_proof_wrapper(row as u8, *col, block, _proof, _commitment)
+        }))
     }
 
+    // waiting for child threads to complete their jobs
+    for child in children {
+        let ret = child.join().unwrap();
+        results.push(ret);
+    }
+
+    // checking how many verification attempts were successful
     results.iter().filter(|&v| *v).count() as u8
 }
