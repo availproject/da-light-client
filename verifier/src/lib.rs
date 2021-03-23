@@ -11,9 +11,9 @@ use std::convert::TryInto;
 // use dusk_bytes::Serializable;
 
 // code for light client to verify incoming kate proofs
-// args - now - row number, column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
+// args - now - column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
 // args - in future - multiple sets of these
-fn kc_verify_proof(_row_num: u8, col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool {
+fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool {
     let params = vec![
         178, 84, 164, 248, 187, 227, 126, 84, 84, 157, 147, 116, 228, 246, 78, 83, 95, 179, 181,
         97, 166, 109, 68, 108, 111, 211, 186, 151, 5, 185, 234, 30, 81, 196, 188, 1, 2, 186, 217,
@@ -701,7 +701,6 @@ fn kc_verify_proof(_row_num: u8, col_num: u8, response: Vec<u8>, commitment: Vec
 
 #[no_mangle]
 pub extern "C" fn verify_proof(
-    row: u8,
     col: u8,
     c: *const u8,
     c_len: size_t,
@@ -720,6 +719,6 @@ pub extern "C" fn verify_proof(
         slice::from_raw_parts(p, p_len as usize)
     };
 
-    kc_verify_proof(row, col, proof.to_vec(), commitment.to_vec())
+    kc_verify_proof(col, proof.to_vec(), commitment.to_vec())
     // true
 }

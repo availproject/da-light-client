@@ -90,7 +90,7 @@ const verifyBlock = async (blockNumber, indices, commitment, proof) => {
 
         (await Promise.all(indices.map(({ row, col }, index) => {
 
-            return verifyProof(row, col, commitment.slice(48 * row, row * 48 + 48), proof.slice(80 * index, index * 80 + 80))
+            return verifyProof(col, commitment.slice(48 * row, row * 48 + 48), proof.slice(80 * index, index * 80 + 80))
 
         }))).map((v, i) => {
 
