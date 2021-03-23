@@ -1,8 +1,10 @@
 extern crate libc;
+extern crate num_cpus;
+extern crate threadpool;
 
 use libc::size_t;
 use std::slice;
-use std::thread;
+use std::sync::mpsc::channel;
 
 use dusk_plonk::bls12_381::G1Affine;
 use dusk_plonk::commitment_scheme::kzg10;
@@ -711,7 +713,7 @@ fn kc_verify_proof_wrapper(
 ) -> bool {
     let status = kc_verify_proof(col, proof, commitment);
     if status {
-        println!("➕  Verified cell ({}, {}) of #{}", row, col, block);
+        println!("➕  Verified cell ({:0>3}, {:>3}) of #{}", row, col, block);
     }
 
     status
@@ -756,8 +758,10 @@ pub extern "C" fn verify_proof(
     })
     .to_vec();
 
-    let mut results = vec![];
-    let mut children = vec![];
+    let cpus = num_cpus::get();
+    let pool = threadpool::ThreadPool::new(cpus);
+    let (tx, rx) = channel::<bool>();
+    let jobs = cols.len();
 
     for (pos, col) in cols.iter().enumerate() {
         // -- slicing out relevant proof slice
@@ -775,18 +779,19 @@ pub extern "C" fn verify_proof(
         let _commitment = commitment[c_start..c_end].to_vec();
         // -- obtained commitment subslice of interest, for specific (row, col) i.e. cell
 
-        // spawning threads of workers
-        children.push(thread::spawn(move || {
-            kc_verify_proof_wrapper(row as u8, *col, block, _proof, _commitment)
-        }))
-    }
-
-    // waiting for child threads to complete their jobs
-    for child in children {
-        let ret = child.join().unwrap();
-        results.push(ret);
+        let tx = tx.clone();
+        pool.execute(move || {
+            tx.send(kc_verify_proof_wrapper(
+                row as u8,
+                *col,
+                block,
+                _proof,
+                _commitment,
+            ))
+            .expect("Receiver got it 🤩");
+        });
     }
 
     // checking how many verification attempts were successful
-    results.iter().filter(|&v| *v).count() as u8
+    rx.iter().take(jobs).filter(|&v| v).count() as u8
 }
