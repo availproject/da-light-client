@@ -724,17 +724,19 @@ pub extern "C" fn verify_proof(
         slice::from_raw_parts(cols, cols_len as usize)
     };
 
-    let commitment = unsafe {
+    let commitment = (unsafe {
         assert!(!c.is_null());
 
         slice::from_raw_parts(c, c_len as usize)
-    };
+    })
+    .to_vec();
 
-    let proof = unsafe {
+    let proof = (unsafe {
         assert!(!p.is_null());
 
         slice::from_raw_parts(p, p_len as usize)
-    };
+    })
+    .to_vec();
 
     let mut results = vec![];
 
@@ -742,16 +744,21 @@ pub extern "C" fn verify_proof(
         let p_start = pos * 80;
         let p_end = p_start + 80;
 
-        let _proof = proof.to_vec()[p_start..p_end].to_vec();
+        let _proof = proof[p_start..p_end].to_vec();
 
         let c_start = usize::from(rows[pos]) * 48;
         let c_end = c_start + 48;
 
-        let _commitment = commitment.to_vec()[c_start..c_end].to_vec();
+        let _commitment = commitment[c_start..c_end].to_vec();
 
         let status = kc_verify_proof(*col, _proof, _commitment);
         if status {
-            println!("➕  Verified cell ({}, {}) of #{}", usize::from(rows[pos]), col, block);
+            println!(
+                "➕  Verified cell ({}, {}) of #{}",
+                usize::from(rows[pos]),
+                col,
+                block
+            );
         }
 
         results.push(status);
