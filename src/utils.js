@@ -8,6 +8,18 @@ const AskProofCount = parseInt(process.env.AskProofCount) || 10
 const MatrixDimX = 256
 const MatrixDimY = 256
 
+const getRows = indices => {
+
+    return indices.map(({ row, col }) => row)
+
+}
+
+const getColumns = indices => {
+
+    return indices.map(({ row, col }) => col)
+
+}
+
 // Generates random data matrix indices, to be used when querying
 // full node for proofs, for a certain block number
 const generateRandomDataMatrixIndices = _ => [...Array(AskProofCount).keys()].map(_ => {
@@ -83,5 +95,5 @@ const setUp = async _ => {
 }
 
 module.exports = {
-    max, setUp, generateRandomDataMatrixIndices
+    max, setUp, generateRandomDataMatrixIndices, getRows, getColumns
 }

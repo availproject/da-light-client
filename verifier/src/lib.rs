@@ -1,7 +1,10 @@
 extern crate libc;
+extern crate num_cpus;
+extern crate threadpool;
 
 use libc::size_t;
 use std::slice;
+use std::sync::mpsc::channel;
 
 use dusk_plonk::bls12_381::G1Affine;
 use dusk_plonk::commitment_scheme::kzg10;
@@ -11,9 +14,9 @@ use std::convert::TryInto;
 // use dusk_bytes::Serializable;
 
 // code for light client to verify incoming kate proofs
-// args - now - row number, column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
+// args - now - column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
 // args - in future - multiple sets of these
-fn kc_verify_proof(_row_num: u8, col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool {
+fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool {
     let params = vec![
         178, 84, 164, 248, 187, 227, 126, 84, 84, 157, 147, 116, 228, 246, 78, 83, 95, 179, 181,
         97, 166, 109, 68, 108, 111, 211, 186, 151, 5, 185, 234, 30, 81, 196, 188, 1, 2, 186, 217,
@@ -699,27 +702,96 @@ fn kc_verify_proof(_row_num: u8, col_num: u8, response: Vec<u8>, commitment: Vec
     verifier_key.check(row_dom_x_pts[col_num as usize], proof)
 }
 
-#[no_mangle]
-pub extern "C" fn verify_proof(
+// Just a wrapper function, to be used when spawning threads for verifying proofs
+// for a certain block
+fn kc_verify_proof_wrapper(
     row: u8,
     col: u8,
+    block: u64,
+    proof: Vec<u8>,
+    commitment: Vec<u8>,
+) -> bool {
+    let status = kc_verify_proof(col, proof, commitment);
+    if status {
+        println!("➕  Verified cell ({:>3}, {:>3}) of #{}", row, col, block);
+    }
+
+    status
+}
+
+#[no_mangle]
+pub extern "C" fn verify_proof(
+    block: u64,
+    rows: *const u8,
+    rows_len: size_t,
+    cols: *const u8,
+    cols_len: size_t,
     c: *const u8,
     c_len: size_t,
     p: *const u8,
     p_len: size_t,
-) -> bool {
-    let commitment = unsafe {
+) -> u8 {
+    let rows = (unsafe {
+        assert!(!rows.is_null());
+
+        slice::from_raw_parts(rows, rows_len as usize)
+    })
+    .to_vec();
+
+    let cols = unsafe {
+        assert!(!cols.is_null());
+
+        slice::from_raw_parts(cols, cols_len as usize)
+    };
+
+    let commitment = (unsafe {
         assert!(!c.is_null());
 
         slice::from_raw_parts(c, c_len as usize)
-    };
+    })
+    .to_vec();
 
-    let proof = unsafe {
+    let proof = (unsafe {
         assert!(!p.is_null());
 
         slice::from_raw_parts(p, p_len as usize)
-    };
+    })
+    .to_vec();
 
-    kc_verify_proof(row, col, proof.to_vec(), commitment.to_vec())
-    // true
+    let cpus = num_cpus::get();
+    let pool = threadpool::ThreadPool::new(cpus);
+    let (tx, rx) = channel::<bool>();
+    let jobs = cols.len();
+
+    for (pos, col) in cols.iter().enumerate() {
+        // -- slicing out relevant proof slice
+        let p_start = pos * 80;
+        let p_end = p_start + 80;
+
+        let _proof = proof[p_start..p_end].to_vec();
+        // -- obtained proof sub slice
+
+        // -- slicing out relevant commitment sub slice
+        let row = usize::from(rows[pos]);
+        let c_start = row * 48;
+        let c_end = c_start + 48;
+
+        let _commitment = commitment[c_start..c_end].to_vec();
+        // -- obtained commitment subslice of interest, for specific (row, col) i.e. cell
+
+        let tx = tx.clone();
+        pool.execute(move || {
+            tx.send(kc_verify_proof_wrapper(
+                row as u8,
+                *col,
+                block,
+                _proof,
+                _commitment,
+            ))
+            .expect("Receiver got it 🤩");
+        });
+    }
+
+    // checking how many verification attempts were successful
+    rx.iter().take(jobs).filter(|&v| v).count() as u8
 }

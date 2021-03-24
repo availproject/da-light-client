@@ -1,6 +1,6 @@
 const humanizeDuration = require('humanize-duration')
 const { verifyProof } = require('./verifier')
-const { max, setUp, generateRandomDataMatrixIndices } = require('./utils')
+const { max, setUp, generateRandomDataMatrixIndices, getRows, getColumns } = require('./utils')
 
 const BatchSize = BigInt(process.env.BatchSize || 10)
 
@@ -88,19 +88,8 @@ const verifyBlock = async (blockNumber, indices, commitment, proof) => {
 
     try {
 
-        (await Promise.all(indices.map(({ row, col }, index) => {
-
-            return verifyProof(row, col, commitment.slice(48 * row, row * 48 + 48), proof.slice(80 * index, index * 80 + 80))
-
-        }))).map((v, i) => {
-
-            console.info(v ? `➕  Verified proof : cell (${indices[i].row}, ${indices[i].col}) of #${blockNumber}` : `➖  Failed to verify proof : cell (${indices[i].row}, ${indices[i].col}) of #${blockNumber}`)
-
-            if (v) {
-                state.incrementConfidence(BigInt(blockNumber).toString())
-            }
-
-        })
+        const ret = verifyProof(parseInt(blockNumber), getRows(indices), getColumns(indices), commitment, proof)
+        state.setConfidence(BigInt(blockNumber).toString(), ret)
 
     } catch (e) {
         console.log(`❌ Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
