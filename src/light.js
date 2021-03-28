@@ -208,6 +208,11 @@ const startLightClient = async _ => {
 
         }
 
+        // Because genesis block doesn't have any commitment in header
+        if (BigInt(header.number) < 1n) {
+            return
+        }
+
         const start = new Date().getTime()
         console.log(`🛠   Verifying block : ${header.number}`)
 
