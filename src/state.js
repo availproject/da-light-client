@@ -1,3 +1,6 @@
+const { BigNumber } = require('bignumber.js')
+const humanizeDuration = require('humanize-duration')
+
 class BlockConfidence {
 
     constructor() {
@@ -29,7 +32,17 @@ class BlockConfidence {
 
     rate() {
         // per second blocks getting verified
-        return this.done() / ((new Date().getTime() - this.startedAt) / 1000)
+        return new BigNumber(this.done() / ((new Date().getTime() - this.startedAt) / 1000))
+    }
+
+    eta() {
+        // expected when syncing will be fully done
+        return humanizeDuration(new BigNumber((this.latest - BigInt(this.done())).toString()).div(this.rate()).toNumber() * 1000)
+    }
+
+    uptime() {
+        // light client is up & running for duration
+        return humanizeDuration(new Date().getTime() - this.startedAt)
     }
 
 }
