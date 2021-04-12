@@ -3,6 +3,8 @@ class BlockConfidence {
     constructor() {
         this.blocks = {}
         this.latest = 0n
+        // this is milliseconds
+        this.startedAt = new Date().getTime()
     }
 
     incrementConfidence(number) {
@@ -23,6 +25,11 @@ class BlockConfidence {
 
     updateLatest(num) {
         this.latest = num
+    }
+
+    rate() {
+        // per second blocks getting verified
+        return this.done() / ((new Date().getTime() - this.startedAt) / 1000)
     }
 
 }

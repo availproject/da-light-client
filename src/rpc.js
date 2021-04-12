@@ -1,6 +1,7 @@
 const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
 const cors = require('cors')
+const { BigNumber } = require('bignumber.js')
 
 const port = process.env.PORT || 7000
 
@@ -31,7 +32,8 @@ server.addMethod('get_progress', _ => {
 
     return {
         done: state.done().toString(),
-        target: state.latest.toString()
+        target: state.latest.toString(),
+        rate: `${new BigNumber(state.rate()).toFixed(2)} block(s) /s`
     }
 
 })
