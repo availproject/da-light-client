@@ -86,4 +86,21 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
 
 > Note : You'll receive `0 %` in response, when no verification is yet done for requested block.
 
+Get progress of syncing using
+
+```bash
+ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_progress", "id": 1}' http://localhost:7000/v1/json-rpc | jq
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "done": "6",
+    "target": "13341"
+  }
+}
+```
+
 **More info coming ...**
