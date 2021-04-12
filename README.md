@@ -49,7 +49,7 @@ make run
 
 ## Usage
 
-Given block number ( as decimal number/ string ) returns confidence obtained by light client for this block
+1. Given block number ( as decimal number/ string ) returns confidence obtained by light client for this block
 
 ```bash
 curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_blockConfidence","params": {"number": 223}, "id": 1}' http://localhost:7000/v1/json-rpc | jq
@@ -65,6 +65,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   }
 }
 ```
+---
 
 For malformed block numbers, following will be responded with
 
@@ -86,7 +87,9 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
 
 > Note : You'll receive `0 %` in response, when no verification is yet done for requested block.
 
-Get progress of syncing using
+---
+
+2. Get progress using
 
 ```bash
  curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_progress", "id": 1}' http://localhost:7000/v1/json-rpc | jq
@@ -97,8 +100,11 @@ Get progress of syncing using
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "done": "6",
-    "target": "13341"
+    "done": "4",
+    "target": "13542",
+    "rate": "0.57 block(s) /second",
+    "eta": "6 hours, 36 minutes, 26.266 seconds",
+    "uptime": "7.028 seconds"
   }
 }
 ```
