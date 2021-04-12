@@ -27,6 +27,15 @@ server.addMethod('get_blockConfidence', ({ number }) => {
             }
 })
 
+server.addMethod('get_progress', _ => {
+
+    return {
+        done: state.done().toString(),
+        target: state.latest.toString()
+    }
+
+})
+
 const app = express()
 app.use(express.json())
 app.use(cors())

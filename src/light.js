@@ -197,6 +197,8 @@ const startLightClient = async _ => {
     api.rpc.chain.subscribeNewHeads(async header => {
 
         console.log(`🚀  Chain tip @ ${header.number}`)
+        // keeping track of latest block of chain
+        state.updateLatest(BigInt(header.number))
 
         if (first) {
 
