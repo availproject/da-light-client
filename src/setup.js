@@ -53,7 +53,7 @@ const setUp = async _ => {
     const lc = new LightClient(api, state)
     startServer(state, lc)
 
-    return [state, api]
+    return [lc, api]
 
 }
 

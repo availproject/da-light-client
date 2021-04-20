@@ -1,5 +1,6 @@
 const { setUp } = require('./setup')
 const { generateRandomDataMatrixIndices } = require('./utils')
+const humanizeDuration = require('humanize-duration')
 
 // Subscribing to chain tip & attempt to run
 // block verification and confidence gaining life cycle
@@ -7,7 +8,7 @@ const { generateRandomDataMatrixIndices } = require('./utils')
 // has started
 const startLightClient = async _ => {
 
-    const lc = await setUp()
+    const [lc, api] = await setUp()
 
     api.rpc.chain.subscribeNewHeads(async header => {
 
