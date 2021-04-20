@@ -1,6 +1,6 @@
 const humanizeDuration = require('humanize-duration')
 const { verifyProof } = require('./verifier')
-const { setUp, generateRandomDataMatrixIndices, getRows, getColumns } = require('./utils')
+const { generateRandomDataMatrixIndices, getRows, getColumns } = require('./utils')
 
 class LightClient {
 
@@ -124,41 +124,12 @@ class LightClient {
         })
     }
 
-}
-
-// Subscribing to chain tip & attempt to run
-// block verification and confidence gaining life cycle
-// for each block seen/ mined in chain, after light client
-// has started
-const startLightClient = async _ => {
-
-    [state, api] = await setUp()
-
-    api.rpc.chain.subscribeNewHeads(async header => {
-
-        console.log(`🚀  Chain tip @ ${header.number}`)
-        // keeping track of latest block of chain
-        state.updateLatest(BigInt(header.number))
-
-        // Because genesis block doesn't have any commitment in header
-        if (BigInt(header.number) < 1n) {
-            return
-        }
-
-        const start = new Date().getTime()
-        console.log(`🛠   Verifying block : ${header.number}`)
-
-        const blockNumber = header.number
-        const indices = generateRandomDataMatrixIndices()
-        const commitment = [...header.extrinsicsRoot.commitment]
-        const proof = await askProof(blockNumber, indices)
-
-        await verifyBlock(blockNumber, indices, commitment, proof)
-
-        console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
-
-    })
+    updateLatest(number) {
+        this.state.updateLatest(number)
+    }
 
 }
 
-module.exports = { startLightClient, processBlockByNumber }
+module.exports = {
+    LightClient
+}
