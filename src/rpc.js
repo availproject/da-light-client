@@ -5,7 +5,7 @@ const { processBlockByNumber } = require('./light')
 
 const port = process.env.PORT || 7000
 
-let state
+let state, lc
 const server = new JSONRPCServer()
 
 // Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
@@ -28,7 +28,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
             return state.getConfidence(number)
         }
 
-        const resp = await processBlockByNumber(parseInt(number, 10))
+        const resp = await lc.processBlockByNumber(BigInt(number))
         if (resp.status != 1) {
             return '0 %'
         }
@@ -82,11 +82,12 @@ app.post('/v1/json-rpc', (req, res) => {
 
 })
 
-const startServer = _state => {
+const startServer = (_state, _lc) => {
 
     // Initialising state holder, so that JSON-RPC queries can be
     // answered
     state = _state
+    lc = _lc
     // Starting JSON-RPC server
     app.listen(port, _ => {
 
