@@ -132,83 +132,19 @@ const processBlockByNumber = num =>
 
     })
 
-// Given block number range, fetches all of them & attempts to
-// verify each of them, where in each iteration it'll process `N`
-// many block(s) & attempt to gain confiidence, by performing a set of
-// proof query & verification rounds
-//
-// @note Proof asking rounds are now batched into a single RPC call
-const processBlocksInRange = async (x, y) => {
-
-    const target = y - x + 1n
-    let covered = 0n
-
-    while (covered <= target) {
-
-        const promises = []
-
-        for (let i = y - covered; i >= max(y - covered - BatchSize + 1n, x); i -= 1n) {
-            promises.push(processBlockByNumber(i))
-        }
-
-        try {
-
-            const start = new Date().getTime()
-
-            const result = (await Promise.all(promises)).reduce((acc, cur) => {
-
-                acc[cur.status].push(cur.block)
-                return acc
-
-            }, { 0: [], 1: [] })
-
-            if (result[1].length != 0) {
-
-                console.log(`✅ Batch verified ${result[1].length} block(s) in ${humanizeDuration(new Date().getTime() - start)}`)
-
-            }
-
-            if (result[0].length != 0) {
-
-                console.log(`❌ Failed to batch verify ${result[0].length} block(s) 👇`)
-                console.log(result[0])
-
-            }
-
-        } catch (e) {
-            console.error(e.toString())
-        } finally {
-            covered += (BatchSize + 1n)
-        }
-
-    }
-
-}
-
 // Subscribing to chain tip & attempt to run
 // block verification and confidence gaining life cycle
-// for each block seen/ mined in chain
+// for each block seen/ mined in chain, after light client
+// has started
 const startLightClient = async _ => {
 
     [state, api] = await setUp()
-
-    let first = true
 
     api.rpc.chain.subscribeNewHeads(async header => {
 
         console.log(`🚀  Chain tip @ ${header.number}`)
         // keeping track of latest block of chain
         state.updateLatest(BigInt(header.number))
-
-        if (first) {
-
-            first = !first
-            if (BigInt(header.number) > 1n) {
-                processBlocksInRange(1n, BigInt(header.number))
-                return
-            }
-
-        }
 
         // Because genesis block doesn't have any commitment in header
         if (BigInt(header.number) < 1n) {
