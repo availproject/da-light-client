@@ -31,9 +31,7 @@ server.addMethod('get_progress', _ => {
 
     return {
         done: state.done().toString(),
-        target: state.latest.toString(),
-        rate: `${state.rate().toFixed(2)} block(s)/ second`,
-        eta: state.eta(),
+        latest: state.latest.toString(),
         uptime: state.uptime()
     }
 
