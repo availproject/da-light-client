@@ -10,6 +10,10 @@ class BlockConfidence {
         this.startedAt = new Date().getTime()
     }
 
+    alreadyVerified(number) {
+        return number in this.blocks
+    }
+
     incrementConfidence(number) {
         this.blocks[number] = (this.blocks[number] || 0) + 1
     }

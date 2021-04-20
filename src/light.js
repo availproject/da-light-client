@@ -1,8 +1,6 @@
 const humanizeDuration = require('humanize-duration')
 const { verifyProof } = require('./verifier')
-const { max, setUp, generateRandomDataMatrixIndices, getRows, getColumns } = require('./utils')
-
-const BatchSize = BigInt(process.env.BatchSize || 10)
+const { setUp, generateRandomDataMatrixIndices, getRows, getColumns } = require('./utils')
 
 // To be initialised at some later point of time
 //
@@ -104,7 +102,7 @@ const processBlockByNumber = num =>
 
         const start = new Date().getTime()
 
-        console.log(`🛠   Verifying block : ${num}`)
+        console.log(`🛠   Verifying block : ${num}, on request`)
 
         const block = await fetchBlockByNumber(num.toString())
         if (!block) {
@@ -124,7 +122,7 @@ const processBlockByNumber = num =>
 
         await verifyBlock(blockNumber, indices, commitment, proof)
 
-        console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}`)
+        console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}, on request`)
         res({
             status: 1,
             block: num
@@ -167,4 +165,4 @@ const startLightClient = async _ => {
 
 }
 
-module.exports = { startLightClient }
+module.exports = { startLightClient, processBlockByNumber }

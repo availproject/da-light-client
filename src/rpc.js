@@ -1,6 +1,7 @@
 const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
 const cors = require('cors')
+const { processBlockByNumber } = require('./light')
 
 const port = process.env.PORT || 7000
 
@@ -9,16 +10,42 @@ const server = new JSONRPCServer()
 
 // Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
 // returns confidence associated with it
-server.addMethod('get_blockConfidence', ({ number }) => {
+server.addMethod('get_blockConfidence', async ({ number }) => {
+
+    // This is a closure hook, which will be invoked before
+    // responding to obtained confidence RPC query
+    //
+    // If we've already seen request for this block before
+    // ( or processed it, because we caught this block
+    // while listening to it ), it'll be responded back immediately
+    // with stored confidence. But for this time seen blocks, it'll
+    // attempt to gain confidence & then respond back to client
+    //
+    // @note It can be time consuming for second case
+    async function wrapperOnConfidenceFetcher(number) {
+
+        if (state.alreadyVerified(number)) {
+            return state.getConfidence(number)
+        }
+
+        const resp = await processBlockByNumber(parseInt(number, 10))
+        if (resp.status != 1) {
+            return '0 %'
+        }
+
+        return state.getConfidence(number)
+
+    }
+
     return typeof number === 'string' ?
         {
             number,
-            confidence: state.getConfidence(number)
+            confidence: await wrapperOnConfidenceFetcher(number)
         } :
         typeof number === 'number' ?
             {
                 number,
-                confidence: state.getConfidence(number.toString())
+                confidence: await wrapperOnConfidenceFetcher(number.toString())
             } :
             {
                 number,
