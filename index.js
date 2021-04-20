@@ -2,7 +2,7 @@
 const { join } = require('path')
 require('dotenv').config({ path: join(__dirname, '.env') })
 
-const { startLightClient } = require('./src/light')
+const { startLightClient } = require('./src/run')
 
 // Main entry point, to be invoked for starting light client ops
 const main = _ => startLightClient()
