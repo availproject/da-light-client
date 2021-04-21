@@ -92,7 +92,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
 2. Get progress using
 
 ```bash
- curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_progress", "id": 1}' http://localhost:7000/v1/json-rpc | jq
+curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_progress", "id": 1}' http://localhost:7000/v1/json-rpc | jq
 ```
 
 ```json
@@ -100,11 +100,10 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    "done": "4",
-    "target": "13542",
-    "rate": "0.57 block(s) /second",
-    "eta": "6 hours, 36 minutes, 26.266 seconds",
-    "uptime": "7.028 seconds"
+    "verified": "1",
+    "startedBlock": "51336",
+    "latestBlock": "51337",
+    "uptime": "10.832 seconds"
   }
 }
 ```
