@@ -1,11 +1,11 @@
-const { BigNumber } = require('bignumber.js')
 const humanizeDuration = require('humanize-duration')
 
 class BlockConfidence {
 
     constructor() {
         this.blocks = {}
-        this.latest = 0n
+        this.startedBlock = 0n
+        this.latestBlock = 0n
         // this is milliseconds
         this.startedAt = new Date().getTime()
     }
@@ -31,7 +31,11 @@ class BlockConfidence {
     }
 
     updateLatest(num) {
-        this.latest = num
+        if (this.startedBlock == 0n) {
+            this.startedBlock = num
+        }
+
+        this.latestBlock = num
     }
 
     uptime() {

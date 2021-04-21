@@ -1,7 +1,6 @@
 const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
 const cors = require('cors')
-const { processBlockByNumber } = require('./light')
 
 const port = process.env.PORT || 7000
 
@@ -57,8 +56,9 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
 server.addMethod('get_progress', _ => {
 
     return {
-        done: state.done().toString(),
-        latest: state.latest.toString(),
+        verified: state.done().toString(),
+        startedBlock: state.startedBlock.toString(),
+        latestBlock: state.latestBlock.toString(),
         uptime: state.uptime()
     }
 
@@ -90,9 +90,7 @@ const startServer = (_state, _lc) => {
     lc = _lc
     // Starting JSON-RPC server
     app.listen(port, _ => {
-
         console.log(`✅ Running JSON-RPC server @ http://localhost:${port}`)
-
     })
 
 
