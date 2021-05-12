@@ -61,7 +61,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "id": 1,
   "result": {
     "number": 223,
-    "confidence": "99.99223 %"
+    "confidence": 99.90234375
   }
 }
 ```
@@ -88,7 +88,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "id": 1,
   "result": {
     "number": true,
-    "confidence": "0 %",
+    "confidence": 0,
     "error": "Block number must be number/ string"
   }
 }

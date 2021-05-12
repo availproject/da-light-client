@@ -24,7 +24,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     async function wrapperOnConfidenceFetcher(number) {
 
         if(BigInt(number) < 1n) {
-            return '0 %'
+            return 0
         }
 
         if (state.alreadyVerified(number)) {
@@ -32,12 +32,12 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
         }
 
         if(state.latestBlock < BigInt(number)) {
-            return '0 %'
+            return 0
         }
 
         const resp = await lc.processBlockByNumber(BigInt(number))
         if (resp.status != 1) {
-            return '0 %'
+            return 0
         }
 
         return state.getConfidence(number)
@@ -56,7 +56,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
             } :
             {
                 number,
-                confidence: '0 %',
+                confidence: 0,
                 error: 'Block number must be number/ string'
             }
 })

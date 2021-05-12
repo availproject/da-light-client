@@ -23,7 +23,7 @@ class BlockConfidence {
     }
 
     getConfidence(number) {
-        return `${(1 - (1 / Math.pow(2, this.blocks[number] || 0))) * 100} %`
+        return (1 - (1 / Math.pow(2, this.blocks[number] || 0))) * 100
     }
 
     done() {
