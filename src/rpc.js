@@ -27,6 +27,10 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
             return state.getConfidence(number)
         }
 
+        if(state.latestBlock < BigInt(number)) {
+            return '0 %'
+        }
+
         const resp = await lc.processBlockByNumber(BigInt(number))
         if (resp.status != 1) {
             return '0 %'
@@ -89,7 +93,7 @@ app.get('/v1/confidence/:block', (req, res) => {
     let body = {
         jsonrpc: "2.0",
         method: "get_blockConfidence",
-        params: { number: parseInt(req.params.block, 10) },
+        params: { number: req.params.block },
         id: 1
     }
     server.receive(body).then((jsonRPCResp) => {
