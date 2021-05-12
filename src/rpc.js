@@ -44,7 +44,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
 
     }
 
-    return typeof number === 'string' ?
+    return typeof number === 'string' && /^(0x)?\d+$/.test(number) ?
         {
             number,
             confidence: await wrapperOnConfidenceFetcher(number)
