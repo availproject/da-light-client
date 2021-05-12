@@ -23,6 +23,10 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     // @note It can be time consuming for second case
     async function wrapperOnConfidenceFetcher(number) {
 
+        if(BigInt(number) < 1n) {
+            return '0 %'
+        }
+
         if (state.alreadyVerified(number)) {
             return state.getConfidence(number)
         }

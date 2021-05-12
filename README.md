@@ -65,6 +65,15 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   }
 }
 ```
+
+> If you need one GET API, you can use
+
+> ```bash
+> curl -s localhost:7000/v1/confidence/<blockNumber> | jq
+> ```
+
+> Response schema same as above.
+
 ---
 
 For malformed block numbers, following will be responded with
