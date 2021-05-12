@@ -82,6 +82,26 @@ app.post('/v1/json-rpc', (req, res) => {
 
 })
 
+app.get('/v1/confidence/:block', (req, res) => {
+
+    console.log(`⚡️ Block Confidence ${req.params.block} | ${req.ip} | ${new Date().toISOString()}`)
+
+    let body = {
+        jsonrpc: "2.0",
+        method: "get_blockConfidence",
+        params: { number: parseInt(req.params.block, 10) },
+        id: 1
+    }
+    server.receive(body).then((jsonRPCResp) => {
+        if (jsonRPCResp) {
+            res.json(jsonRPCResp)
+        } else {
+            res.sendStatus(204)
+        }
+    })
+
+})
+
 const startServer = (_state, _lc) => {
 
     // Initialising state holder, so that JSON-RPC queries can be
