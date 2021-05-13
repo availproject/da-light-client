@@ -2,6 +2,8 @@
 
 Light client for Data Availability Blockchain of Polygon 🐿
 
+**OnChain DA LightClient's primary version available [here](./onchain)**
+
 ![banner](./sc/banner.png)
 
 ## Introduction
