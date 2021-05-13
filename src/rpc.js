@@ -1,11 +1,13 @@
 const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
 const cors = require('cors')
+const AbiCoder = require('ethers').utils.AbiCoder
 
 const port = process.env.PORT || 7000
 
 let state, lc
 const server = new JSONRPCServer()
+const abi = new AbiCoder()
 
 // Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
 // returns confidence associated with it
@@ -23,7 +25,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     // @note It can be time consuming for second case
     async function wrapperOnConfidenceFetcher(number) {
 
-        if(BigInt(number) < 1n) {
+        if (BigInt(number) < 1n) {
             return 0
         }
 
@@ -31,7 +33,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
             return state.getConfidence(number)
         }
 
-        if(state.latestBlock < BigInt(number)) {
+        if (state.latestBlock < BigInt(number)) {
             return 0
         }
 
@@ -44,16 +46,23 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
 
     }
 
-    return typeof number === 'string' && /^(0x)?\d+$/.test(number) ?
-        {
-            number,
-            confidence: await wrapperOnConfidenceFetcher(number)
-        } :
-        typeof number === 'number' ?
-            {
-                number,
-                confidence: await wrapperOnConfidenceFetcher(number.toString())
-            } :
+    async function getConfidence(number) {
+        const confidence = await wrapperOnConfidenceFetcher(BigInt(number).toString(10))
+        return {
+            number: parseInt(number),
+            confidence,
+            serialisedConfidence: abi.encode(
+                ['uint256', 'uint256'],
+                [`0x${parseInt(number).toString(16)}`, `0x${Math.round(confidence * 10 ** 7).toString(16)}`]
+            )
+        }
+    }
+
+    return typeof number === 'string' && /^((0[xX][0-9a-fA-F]+)|(\d+))$/.test(number)
+        ? getConfidence(number)
+        : typeof number === 'number'
+            ? getConfidence(number.toString())
+            :
             {
                 number,
                 confidence: 0,
