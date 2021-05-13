@@ -61,10 +61,19 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "id": 1,
   "result": {
     "number": 223,
-    "confidence": "99.99223 %"
+    "confidence": 99.90234375
   }
 }
 ```
+
+> If you need one GET API, you can use
+
+> ```bash
+> curl -s localhost:7000/v1/confidence/<blockNumber> | jq
+> ```
+
+> Response schema same as above.
+
 ---
 
 For malformed block numbers, following will be responded with
@@ -79,7 +88,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "id": 1,
   "result": {
     "number": true,
-    "confidence": "0 %",
+    "confidence": 0,
     "error": "Block number must be number/ string"
   }
 }

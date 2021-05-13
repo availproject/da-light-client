@@ -23,20 +23,28 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     // @note It can be time consuming for second case
     async function wrapperOnConfidenceFetcher(number) {
 
+        if(BigInt(number) < 1n) {
+            return 0
+        }
+
         if (state.alreadyVerified(number)) {
             return state.getConfidence(number)
         }
 
+        if(state.latestBlock < BigInt(number)) {
+            return 0
+        }
+
         const resp = await lc.processBlockByNumber(BigInt(number))
         if (resp.status != 1) {
-            return '0 %'
+            return 0
         }
 
         return state.getConfidence(number)
 
     }
 
-    return typeof number === 'string' ?
+    return typeof number === 'string' && /^(0x)?\d+$/.test(number) ?
         {
             number,
             confidence: await wrapperOnConfidenceFetcher(number)
@@ -48,7 +56,7 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
             } :
             {
                 number,
-                confidence: '0 %',
+                confidence: 0,
                 error: 'Block number must be number/ string'
             }
 })
@@ -73,6 +81,26 @@ app.post('/v1/json-rpc', (req, res) => {
     console.log(`⚡️ Received JSON-RPC request from ${req.ip} at ${new Date().toISOString()}`)
 
     server.receive(req.body).then((jsonRPCResp) => {
+        if (jsonRPCResp) {
+            res.json(jsonRPCResp)
+        } else {
+            res.sendStatus(204)
+        }
+    })
+
+})
+
+app.get('/v1/confidence/:block', (req, res) => {
+
+    console.log(`⚡️ Block Confidence ${req.params.block} | ${req.ip} | ${new Date().toISOString()}`)
+
+    let body = {
+        jsonrpc: "2.0",
+        method: "get_blockConfidence",
+        params: { number: req.params.block },
+        id: 1
+    }
+    server.receive(body).then((jsonRPCResp) => {
         if (jsonRPCResp) {
             res.json(jsonRPCResp)
         } else {
