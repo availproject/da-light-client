@@ -1,13 +1,12 @@
 const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
 const cors = require('cors')
-const AbiCoder = require('ethers').utils.AbiCoder
+const { serialiseConfidence } = require('./utils')
 
 const port = process.env.PORT || 7000
 
 let state, lc
 const server = new JSONRPCServer()
-const abi = new AbiCoder()
 
 // Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
 // returns confidence associated with it
@@ -47,14 +46,12 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     }
 
     async function getConfidence(number) {
-        const confidence = await wrapperOnConfidenceFetcher(BigInt(number).toString(10))
+        const number_ = BigInt(number).toString(10)
+        const confidence = await wrapperOnConfidenceFetcher(number_)
         return {
-            number: parseInt(number),
+            number: number_,
             confidence,
-            serialisedConfidence: abi.encode(
-                ['uint256', 'uint256'],
-                [`0x${parseInt(number).toString(16)}`, `0x${Math.round(confidence * 10 ** 7).toString(16)}`]
-            )
+            serialisedConfidence: serialiseConfidence(number_, Math.round(confidence * 10 ** 7))
         }
     }
 
