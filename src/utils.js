@@ -21,39 +21,12 @@ const getRandomInt = (low, high) => {
     return Math.floor(Math.random() * (high - low)) + low
 }
 
-// Given number, converts it into an array
-// of unsigned 8-bit intergers, where bytes
-// are placed in BigEndian form
-const numberToUint8Array = number => {
-    if (number == 0) {
-        return new Uint8Array([])
-    }
-
-    const arr = []
-    arr.unshift(number & 255)
-    while (number >= 256) {
-        number = number >>> 8
-        arr.unshift(number & 255)
-    }
-
-    return new Uint8Array(arr)
-}
-
-// Converts a unsigned 8-bit interger array into
-// hexadecimal string ( doesn't prepend `0x` )
-const getUint8ArrayToHex = (number, size) => {
-    return [...numberToUint8Array(number)]
-        .map(v => v.toString(16).padStart(2, '0'))
-        .join('')
-        .padStart(size, '0')
-}
-
 // Given block number & respective confidence ( represented out of 10 ^ 9 )
 // encodes block number in 28 bytes ( upper i.e. MSB ) & confidence in 4 bytes ( LSB )
 //
 // To be deserialised in contract
 const serialiseConfidence = (block, confidence) => {
-    return '0x' + getUint8ArrayToHex(block, 56) + getUint8ArrayToHex(confidence, 8)
+    return `0x${(BigInt(block) << BigInt(32) | BigInt(confidence)).toString(16).padStart(64, '0')}`
 }
 
 module.exports = {

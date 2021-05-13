@@ -73,11 +73,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
 
 **Note :** Serialised confidence has been added recently so that it can be consumed by smart contract light client. This field is computed as below
 
-- Convert block number into byte array of length 28 [ **some of MSBs may be zeroed** ]
-- Convert this byte array into hex string [ **don't prepend `0x`** ]
-- Convert confidence into byte array of length 4, where confidence is represented out of `10 ^ 9` i.e. multiply confidence out of 100 with `10 ^ 7`
-- Convert byte array confidence into respective hex representation, without prepending `0x`
-- Concatenate `<hex-block-number> + <hex-confidence-out-of-10**7>` & prepend `0x`
+> `blockNumber << 32 | confidence`, where confidence is represented as out of 10 ** 9
 
 That's what [`serialiseConfidence()`](./src/utils.js) does.
 
