@@ -46,12 +46,11 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     }
 
     async function getConfidence(number) {
-        const number_ = BigInt(number).toString(10)
-        const confidence = await wrapperOnConfidenceFetcher(number_)
+        const confidence = await wrapperOnConfidenceFetcher(BigInt(number).toString(10))
         return {
-            number: number_,
+            number: parseInt(number),
             confidence,
-            serialisedConfidence: serialiseConfidence(number_, Math.round(confidence * 10 ** 7))
+            serialisedConfidence: serialiseConfidence(parseInt(number), Math.round(confidence * 10 ** 7))
         }
     }
 
