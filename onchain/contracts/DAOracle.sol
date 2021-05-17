@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import { ChainlinkClient } from "@chainlink/contracts/src/v0.8/dev/ChainlinkClient.sol";
-import { Chainlink } from "@chainlink/contracts/src/v0.8/dev/Chainlink.sol";
+import "https://github.com/smartcontractkit/chainlink/blob/develop/evm-contracts/src/v0.8/dev/ChainlinkClient.sol";
+import "https://github.com/smartcontractkit/chainlink/blob/develop/evm-contracts/src/v0.8/dev/Chainlink.sol";
 
 contract DAOracle is ChainlinkClient {
     using Chainlink for Chainlink.Request;
@@ -24,10 +24,10 @@ contract DAOracle is ChainlinkClient {
         setChainlinkToken(token_);
         lightClientURL = "https://polygon-da-light.matic.today/v1/confidence";
         oracle = 0x1cf7D49BE7e0c6AC30dEd720623490B64F572E17;
-        jobId = 'a8c5f4e776d845e68d4ac724b7765994';
+        jobId = 'b29e1e51ae054c42849407b3cc28690d';
         fee = 10 ** 16;
     }
-
+    
     function updateLightClientURL(string memory url_) public {
         emit LightClientUpdated(lightClientURL, url_);
         lightClientURL = url_;
@@ -81,15 +81,15 @@ contract DAOracle is ChainlinkClient {
         return sendChainlinkRequestTo(oracle, request, fee);
     }
     
-    function deserialise(bytes32 serialisedConfidence) internal pure returns (uint256, uint256) {
-        bytes32 mask = 0x00000000000000000000000000000000000000000000000000000000ffffffff;
-        bytes32 a = serialisedConfidence >> 32;
-        bytes32 b = serialisedConfidence & mask;
+    function deserialise(uint256 serialisedConfidence) internal pure returns (uint256, uint256) {
+        uint256 mask = 0x00000000000000000000000000000000000000000000000000000000ffffffff;
+        uint256 a = serialisedConfidence >> 32;
+        uint256 b = serialisedConfidence & mask;
         
-        return (uint256(a), uint256(b));
+        return (a, b);
     }
     
-    function setConfidence(bytes32 requestId_, bytes32 confidence_) public recordChainlinkFulfillment(requestId_) {
+    function setConfidence(bytes32 requestId_, uint256 confidence_) public recordChainlinkFulfillment(requestId_) {
         (uint256 block_, uint256 confFactor_) = deserialise(confidence_);
         confidence[block_] = confFactor_;
         emit BlockConfidence(block_, confFactor_);

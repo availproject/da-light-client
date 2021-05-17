@@ -64,7 +64,7 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "result": {
     "number": 223,
     "confidence": 99.90234375,
-    "serialisedConfidence": "0x000000000000000000000000000000000000000000000000000000df3b8be34e"
+    "serialisedConfidence": "958776730446"
   }
 }
 ```

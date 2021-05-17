@@ -6,12 +6,12 @@ Flow is like
 
 - Invoke `requestConfidence(...)` while providing it with block number of interest
 - It'll use chainlink oracle to send request to outer world, which will be eventually picked up by designated Oracle Node & fulfilled
-- Before fulfilment, oracle node fetches current confidence gained by specified Light Client for mentioned block & picks `serialisedConfidence` field's value
+- Before fulfilment, oracle node fetches confidence gained by specified Light Client for mentioned block & picks `serialisedConfidence` field's value from JSON response
 - Sends onchain transaction fulfilling request, where as function payload, value for field `serialisedConfidence` is passed
 
-This value is byte serialised as
+Confidence serialisation is done using
 
-> `<block-number> + <confidence>`
+> `(<block-number> << 32) | <confidence>`
 
 in 32 bytes fixed space.
 
