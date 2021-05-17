@@ -27,4 +27,12 @@ Deserialisation logic is written in `DAOracle.deserialise(...)`, which will be i
 
 Finally you can check `confidence` public associative array for querying confidence for guevn block number.
 
-> LINK token, Chainlink Oracle address etc. can be found [here](https://github.com/maticnetwork/chainlink-integration#integrate-chainlink-with-matic-network)
+## Deployment Details
+
+### Polygon Mumbai Test Network
+
+Contract | Address
+--- | ---
+LINK Token | `0x70d1F773A9f81C852087B77F6Ae6d3032B02D2AB`
+Chainlink Oracle | `0x1cf7D49BE7e0c6AC30dEd720623490B64F572E17`
+DA Oracle | `0x64b1893eC781545078AbeeDf219D7CbA7D30B225`

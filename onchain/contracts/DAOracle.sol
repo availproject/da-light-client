@@ -2,10 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "https://github.com/smartcontractkit/chainlink/blob/develop/evm-contracts/src/v0.8/dev/ChainlinkClient.sol";
-import "https://github.com/smartcontractkit/chainlink/blob/develop/evm-contracts/src/v0.8/dev/Chainlink.sol";
+import { ChainlinkClient } from "@chainlink/contracts/src/v0.8/dev/ChainlinkClient.sol";
+import { Chainlink } from "@chainlink/contracts/src/v0.8/dev/Chainlink.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract DAOracle is ChainlinkClient {
+contract DAOracle is ChainlinkClient, AccessControl {
     using Chainlink for Chainlink.Request;
 
     mapping(uint256 => uint256) public confidence;
@@ -26,24 +27,25 @@ contract DAOracle is ChainlinkClient {
         oracle = 0x1cf7D49BE7e0c6AC30dEd720623490B64F572E17;
         jobId = 'b29e1e51ae054c42849407b3cc28690d';
         fee = 10 ** 16;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
     
-    function updateLightClientURL(string memory url_) public {
+    function updateLightClientURL(string memory url_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit LightClientUpdated(lightClientURL, url_);
         lightClientURL = url_;
     }
     
-    function updateOracle(address oracle_) public {
+    function updateOracle(address oracle_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit OracleUpdated(oracle, oracle_);
         oracle = oracle_;
     }
     
-    function updateJobId(bytes32 jobId_) public {
+    function updateJobId(bytes32 jobId_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit JobIdUpdated(jobId, jobId_);
         jobId = jobId_;
     }
     
-    function updateFee(uint256 fee_) public {
+    function updateFee(uint256 fee_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit FeeUpdated(fee, fee_);
         fee = fee_;
     }
