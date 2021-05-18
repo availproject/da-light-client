@@ -1,6 +1,10 @@
 ## DA OnChain Light Client
 
-This Data Availability onchain light client uses **Chainlink Oracle Network** to bring in respective block confidence from outer world.
+### Architecture
+
+![architecture](../sc/architecture-da-oracle.jpg)
+
+Data Availability onchain light client uses **Chainlink Oracle Network** to bring in respective block confidence from outer world.
 
 Flow is like
 
