@@ -31,6 +31,10 @@ Deserialisation logic is written in `DAOracle.deserialise(...)`, which will be i
 
 Finally you can check `confidence` public associative array for querying confidence for guevn block number.
 
+Here's one visual
+
+![confidence-serialisation](../sc/serialised-confidence.jpg)
+
 ## Deployment Details
 
 ### Polygon Mumbai Test Network
