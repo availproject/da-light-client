@@ -9,40 +9,63 @@ import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol"
 contract DAOracle is ChainlinkClient, AccessControl {
     using Chainlink for Chainlink.Request;
 
+    struct LightClient {
+        string url;
+        bool use;
+        bool exists;
+    }
     mapping(uint256 => uint256) public confidence;
-    string public lightClientURL;
+    mapping(bytes32 => LightClient) public jobs;
+    bytes32[] public jobList;
     address public oracle;
-    bytes32 public jobId;
     uint256 public fee;
-    
-    event LightClientUpdated(string old_, string new_);
+
+    event LightClientUpdated(bytes32 jobId, string url, bool enabled);
     event OracleUpdated(address old_, address new_);
-    event JobIdUpdated(bytes32 old_, bytes32 new_);
     event FeeUpdated(uint256 old_, uint256 new_);
     event BlockConfidence(uint256 indexed block_, uint256 confidence_);
-    
+    event BlockConfidenceRequest(uint256 indexed block_, bytes32 requestId_);
+
     constructor(address token_) {
         setChainlinkToken(token_);
-        lightClientURL = "https://polygon-da-light.matic.today/v1/confidence";
+
         oracle = 0x1cf7D49BE7e0c6AC30dEd720623490B64F572E17;
-        jobId = 'b29e1e51ae054c42849407b3cc28690d';
         fee = 10 ** 16;
+        jobs['b29e1e51ae054c42849407b3cc28690d'] = LightClient("https://polygon-da-light.matic.today/v1/confidence", true, true);
+        jobList.push('b29e1e51ae054c42849407b3cc28690d');
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
-    
-    function updateLightClientURL(string memory url_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        emit LightClientUpdated(lightClientURL, url_);
-        lightClientURL = url_;
+
+    function updateLightClient(bytes32 jobId_, string memory url_, bool use) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        LightClient memory lc = jobs[jobId_];
+        if(!lc.exists) {
+            require(use, "Light client not yet registered");
+            jobs[jobId_] = LightClient(url_, use, true);
+            jobList.push(jobId_);
+
+            emit LightClientUpdated(jobId_, url_, use);
+            return;
+        }
+
+        if(lc.use) {
+            require(!use, "Light client already in use");
+            lc.use = use;
+            jobs[jobId_] = lc;
+
+            emit LightClientUpdated(jobId_, url_, use);
+            return;
+        }
+
+        require(use, "Light client not in use");
+        lc.use = use;
+        jobs[jobId_] = lc;
+        emit LightClientUpdated(jobId_, url_, use);
     }
     
     function updateOracle(address oracle_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit OracleUpdated(oracle, oracle_);
         oracle = oracle_;
-    }
-    
-    function updateJobId(bytes32 jobId_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        emit JobIdUpdated(jobId, jobId_);
-        jobId = jobId_;
     }
     
     function updateFee(uint256 fee_) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -72,17 +95,27 @@ contract DAOracle is ChainlinkClient, AccessControl {
         return string(str);
     }
     
-    function getQueryURL(uint256 block_) internal view returns(string memory) {
-        return string(abi.encodePacked(lightClientURL, "/", uint256ToStr(block_)));
+    function getQueryURL(string memory url, uint256 block_) internal pure returns(string memory) {
+        return string(abi.encodePacked(url, "/", uint256ToStr(block_)));
     }
     
-    function requestConfidence(uint256 block_) public returns(bytes32) {
-        Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.setConfidence.selector);
-        request.add("get", getQueryURL(block_));
-        request.add("path", "result.serialisedConfidence");
-        return sendChainlinkRequestTo(oracle, request, fee);
+    function requestConfidence(uint256 block_) public {
+        for(uint256 i = 0; i < jobList.length; i++) {
+            bytes32 jobId = jobList[i];
+            LightClient memory lc = jobs[jobId];
+            if(!lc.use) {
+                continue;
+            }
+
+            Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.setConfidence.selector);
+            request.add("get", getQueryURL(lc.url, block_));
+            request.add("path", "result.serialisedConfidence");
+            bytes32 requestId = sendChainlinkRequestTo(oracle, request, fee);
+            
+            emit BlockConfidenceRequest(block_, requestId);
+        }
     }
-    
+
     function deserialise(uint256 serialisedConfidence) internal pure returns (uint256, uint256) {
         uint256 mask = 0x00000000000000000000000000000000000000000000000000000000ffffffff;
         uint256 a = serialisedConfidence >> 32;
@@ -90,7 +123,7 @@ contract DAOracle is ChainlinkClient, AccessControl {
         
         return (a, b);
     }
-    
+
     function setConfidence(bytes32 requestId_, uint256 confidence_) public recordChainlinkFulfillment(requestId_) {
         (uint256 block_, uint256 confFactor_) = deserialise(confidence_);
         confidence[block_] = confFactor_;
