@@ -2,6 +2,8 @@
 
 Light client for Data Availability Blockchain of Polygon 🐿
 
+**OnChain DA LightClient's primary version available [here](./onchain)**
+
 ![banner](./sc/banner.png)
 
 ## Introduction
@@ -49,7 +51,7 @@ make run
 
 ## Usage
 
-1. Given block number ( as decimal number/ string ) returns confidence obtained by light client for this block
+1. Given block number ( as _(hexa-)_ decimal number/ string ) returns confidence obtained by light client for this block
 
 ```bash
 curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_blockConfidence","params": {"number": 223}, "id": 1}' http://localhost:7000/v1/json-rpc | jq
@@ -61,18 +63,31 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
   "id": 1,
   "result": {
     "number": 223,
-    "confidence": 99.90234375
+    "confidence": 99.90234375,
+    "serialisedConfidence": "958776730446"
   }
 }
 ```
 
-> If you need one GET API, you can use
+---
 
-> ```bash
-> curl -s localhost:7000/v1/confidence/<blockNumber> | jq
-> ```
+**Note :** Serialised confidence has been added recently so that it can be consumed by smart contract light client. This field is computed as below
 
-> Response schema same as above.
+> `blockNumber << 32 | confidence`, where confidence is represented as out of 10 ** 9
+
+That's what [`serialiseConfidence()`](./src/utils.js) does.
+
+Deserialisation to be handled on-chain.
+
+---
+
+If you need GET API, you can use
+
+```bash
+curl -s localhost:7000/v1/confidence/<blockNumber> | jq
+```
+
+Response schema same as above.
 
 ---
 

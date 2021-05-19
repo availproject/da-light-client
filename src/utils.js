@@ -21,6 +21,12 @@ const getRandomInt = (low, high) => {
     return Math.floor(Math.random() * (high - low)) + low
 }
 
+// Given block number & respective confidence ( represented out of 10 ^ 9 )
+// encodes block number in upper 28 bytes & confidence in lower 4 bytes
+//
+// To be deserialised in contract
+const serialiseConfidence = (block, confidence) => (BigInt(block) << BigInt(32) | BigInt(confidence)).toString(10)
+
 module.exports = {
-    generateRandomDataMatrixIndices, getRows, getColumns
+    generateRandomDataMatrixIndices, getRows, getColumns, serialiseConfidence
 }
