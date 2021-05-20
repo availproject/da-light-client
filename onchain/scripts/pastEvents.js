@@ -2,7 +2,7 @@ const Provider = require('ethers').providers.JsonRpcProvider
 const ContractInterface = require('ethers').utils.Interface
 
 const provider = new Provider('https://matic-mumbai.chainstacklabs.com')
-const DAOracle = '0xD5fA61C334BdA418C7854d9128352FB325033760'
+const DAOracle = '0xE830b1d5AC84033d23E3Ac28722BaD1f716E24f4'
 const FromBlock = 14_000_000
 const BlockConfidenceSig = '0xbf1ec74434af424546e6f30bd0744a156db3ff0670cd0a462a86999a29edab54'
 const BlockConfidenceRequestSig = '0x0f24941505adda13671d7eb1714f4259acd09589ac6152c1d5648e6ccd216578'
