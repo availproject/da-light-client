@@ -18,6 +18,7 @@ contract DAOracle is ChainlinkClient, AccessControl {
         uint256[] values;
         uint256 max;
         uint256 min;
+        uint256 recent;
         bool exists;
     }
     mapping(uint256 => Confidence) public confidence;
@@ -134,8 +135,8 @@ contract DAOracle is ChainlinkClient, AccessControl {
     }
 
     function getMinMax(uint256 prevMin, uint256 prevMax, uint256 newVal) internal pure returns (uint256, uint256) {
-        uint256 min;
-        uint256 max;
+        uint256 min = prevMin;
+        uint256 max = prevMax;
         
         if(prevMin > newVal) {
             min = newVal;
@@ -153,7 +154,7 @@ contract DAOracle is ChainlinkClient, AccessControl {
 
         Confidence memory conf = confidence[block_];
         if(!conf.exists) {
-            confidence[block_] = Confidence(new uint256[](0), confFactor_, confFactor_, true);
+            confidence[block_] = Confidence(new uint256[](0), confFactor_, confFactor_, confFactor_,  true);
             confidence[block_].values.push(confFactor_);
             
             emit BlockConfidence(block_, confFactor_);
@@ -164,6 +165,7 @@ contract DAOracle is ChainlinkClient, AccessControl {
         confidence[block_].values.push(confFactor_);
         confidence[block_].max = max;
         confidence[block_].min = min;
+        confidence[block_].recent = confFactor_;
 
         emit BlockConfidence(block_, confFactor_);
     }
