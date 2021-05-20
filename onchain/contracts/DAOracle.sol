@@ -15,7 +15,6 @@ contract DAOracle is ChainlinkClient, AccessControl {
         bool exists;
     }
     struct Confidence {
-        uint256[] values;
         uint256 max;
         uint256 min;
         uint256 recent;
@@ -134,38 +133,21 @@ contract DAOracle is ChainlinkClient, AccessControl {
         return (a, b);
     }
 
-    function getMinMax(uint256 prevMin, uint256 prevMax, uint256 newVal) internal pure returns (uint256, uint256) {
-        uint256 min = prevMin;
-        uint256 max = prevMax;
-        
-        if(prevMin > newVal) {
-            min = newVal;
-        }
-        
-        if(prevMax < newVal) {
-            max = newVal;
-        }
-        
-        return (min, max);
-    }
-
     function setConfidence(bytes32 requestId_, uint256 confidence_) public recordChainlinkFulfillment(requestId_) {
         (uint256 block_, uint256 confFactor_) = deserialise(confidence_);
 
         Confidence memory conf = confidence[block_];
         if(!conf.exists) {
-            confidence[block_] = Confidence(new uint256[](0), confFactor_, confFactor_, confFactor_,  true);
-            confidence[block_].values.push(confFactor_);
-            
+            confidence[block_] = Confidence(confFactor_, confFactor_, confFactor_,  true);
+
             emit BlockConfidence(block_, confFactor_);
             return;
         }
 
-        (uint256 min, uint256 max) = getMinMax(conf.min, conf.max, confFactor_);
-        confidence[block_].values.push(confFactor_);
-        confidence[block_].max = max;
-        confidence[block_].min = min;
-        confidence[block_].recent = confFactor_;
+        conf.max = conf.max < confFactor_ ? confFactor_ : conf.max;
+        conf.min = conf.min > confFactor_ ? confFactor_ : conf.min;
+        conf.recent = confFactor_;
+        confidence[block_] = conf;
 
         emit BlockConfidence(block_, confFactor_);
     }
