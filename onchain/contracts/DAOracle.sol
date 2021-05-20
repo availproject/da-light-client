@@ -14,18 +14,24 @@ contract DAOracle is ChainlinkClient, AccessControl {
         bool use;
         bool exists;
     }
-    mapping(uint256 => uint256) public confidence;
+    struct Confidence {
+        uint256[] values;
+        uint256 max;
+        uint256 min;
+        bool exists;
+    }
+    mapping(uint256 => Confidence) public confidence;
     mapping(bytes32 => LightClient) public jobs;
     bytes32[] public jobList;
     address public oracle;
     uint256 public fee;
-
+    
     event LightClientUpdated(bytes32 jobId, string url, bool enabled);
     event OracleUpdated(address old_, address new_);
     event FeeUpdated(uint256 old_, uint256 new_);
     event BlockConfidence(uint256 indexed block_, uint256 confidence_);
     event BlockConfidenceRequest(uint256 indexed block_, bytes32 requestId_);
-
+    
     constructor(address token_) {
         setChainlinkToken(token_);
 
@@ -36,43 +42,46 @@ contract DAOracle is ChainlinkClient, AccessControl {
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
-
-    function updateLightClient(bytes32 jobId_, string memory url_, bool use) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    
+    function updateLightClient(bytes32 jobId_, string memory url_, bool use_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         LightClient memory lc = jobs[jobId_];
         if(!lc.exists) {
-            require(use, "Light client not yet registered");
-            jobs[jobId_] = LightClient(url_, use, true);
+            require(use_, "Light client not yet registered");
+            jobs[jobId_] = LightClient(url_, use_, true);
             jobList.push(jobId_);
 
-            emit LightClientUpdated(jobId_, url_, use);
+            emit LightClientUpdated(jobId_, url_, use_);
             return;
         }
-
+    
         if(lc.use) {
-            require(!use, "Light client already in use");
-            lc.use = use;
+            require(!use_, "Light client already in use");
+            lc.url = url_;
+            lc.use = use_;
             jobs[jobId_] = lc;
-
-            emit LightClientUpdated(jobId_, url_, use);
+            
+            emit LightClientUpdated(jobId_, url_, use_);
             return;
         }
-
-        require(use, "Light client not in use");
-        lc.use = use;
+        
+        require(use_, "Light client not in use");
+        lc.url = url_;
+        lc.use = use_;
         jobs[jobId_] = lc;
-        emit LightClientUpdated(jobId_, url_, use);
+
+        emit LightClientUpdated(jobId_, url_, use_);
     }
     
     function updateOracle(address oracle_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit OracleUpdated(oracle, oracle_);
         oracle = oracle_;
     }
-    
+
     function updateFee(uint256 fee_) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit FeeUpdated(fee, fee_);
         fee = fee_;
     }
-    
+
     function uint256ToStr(uint256 i_) internal pure returns (string memory) {
         if (i_ == 0) {
             return "0";
@@ -94,11 +103,11 @@ contract DAOracle is ChainlinkClient, AccessControl {
 
         return string(str);
     }
-    
+
     function getQueryURL(string memory url, uint256 block_) internal pure returns(string memory) {
         return string(abi.encodePacked(url, "/", uint256ToStr(block_)));
     }
-    
+
     function requestConfidence(uint256 block_) public {
         for(uint256 i = 0; i < jobList.length; i++) {
             bytes32 jobId = jobList[i];
@@ -124,9 +133,38 @@ contract DAOracle is ChainlinkClient, AccessControl {
         return (a, b);
     }
 
+    function getMinMax(uint256 prevMin, uint256 prevMax, uint256 newVal) internal pure returns (uint256, uint256) {
+        uint256 min;
+        uint256 max;
+        
+        if(prevMin > newVal) {
+            min = newVal;
+        }
+        
+        if(prevMax < newVal) {
+            max = newVal;
+        }
+        
+        return (min, max);
+    }
+
     function setConfidence(bytes32 requestId_, uint256 confidence_) public recordChainlinkFulfillment(requestId_) {
         (uint256 block_, uint256 confFactor_) = deserialise(confidence_);
-        confidence[block_] = confFactor_;
+
+        Confidence memory conf = confidence[block_];
+        if(!conf.exists) {
+            confidence[block_] = Confidence(new uint256[](0), confFactor_, confFactor_, true);
+            confidence[block_].values.push(confFactor_);
+            
+            emit BlockConfidence(block_, confFactor_);
+            return;
+        }
+
+        (uint256 min, uint256 max) = getMinMax(conf.min, conf.max, confFactor_);
+        confidence[block_].values.push(confFactor_);
+        confidence[block_].max = max;
+        confidence[block_].min = min;
+
         emit BlockConfidence(block_, confFactor_);
     }
 }
