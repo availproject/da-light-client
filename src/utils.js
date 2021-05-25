@@ -1,6 +1,4 @@
 const AskProofCount = parseInt(process.env.AskProofCount) || 10
-const MatrixDimX = 256
-const MatrixDimY = 256
 
 const getRows = indices => indices.map(({ row, _ }) => row)
 
@@ -8,10 +6,10 @@ const getColumns = indices => indices.map(({ _, col }) => col)
 
 // Generates random data matrix indices, to be used when querying
 // full node for proofs, for a certain block number
-const generateRandomDataMatrixIndices = _ => [...Array(AskProofCount).keys()].map(_ => {
+const generateRandomDataMatrixIndices = (rows, cols) => [...Array(Math.min(rows * cols, AskProofCount)).keys()].map(_ => {
     return {
-        row: getRandomInt(0, MatrixDimX),
-        col: getRandomInt(0, MatrixDimY)
+        row: getRandomInt(0, rows),
+        col: getRandomInt(0, cols)
     }
 })
 
