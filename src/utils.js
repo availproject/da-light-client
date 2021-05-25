@@ -4,14 +4,36 @@ const getRows = indices => indices.map(({ row, _ }) => row)
 
 const getColumns = indices => indices.map(({ _, col }) => col)
 
-// Generates random data matrix indices, to be used when querying
+// Generates unique random data matrix indices, to be used when querying
 // full node for proofs, for a certain block number
-const generateRandomDataMatrixIndices = (rows, cols) => [...Array(Math.min(rows * cols, AskProofCount)).keys()].map(_ => {
-    return {
-        row: getRandomInt(0, rows),
-        col: getRandomInt(0, cols)
+//
+// `rows` & `cols` specifies data matrix size, as per that
+// indices are generated
+const generateRandomDataMatrixIndices = (rows, cols) => {
+    const target = Math.min(rows * cols, AskProofCount)
+    const indices = {}
+
+    while (Object.keys(indices).length < target) {
+        const row = getRandomInt(0, rows)
+        const col = getRandomInt(0, cols)
+
+        const key1 = `${row}${col}`
+        if (!(key1 in indices)) {
+            indices[key1] = { row, col }
+        }
+
+        if (row == col) {
+            continue
+        }
+
+        const key2 = `${col}${row}`
+        if (!(key2 in indices)) {
+            indices[key2] = { row: col, col: row }
+        }
     }
-})
+
+    return Object.entries(indices).map(v => v[1])
+}
 
 // Return random integer in specified range
 // where lower bound is inclusive, but other end is not
