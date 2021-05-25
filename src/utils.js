@@ -20,9 +20,17 @@ const generateRandomDataMatrixIndices = (rows, cols) => {
         const key1 = `${row}${col}`
         if (!(key1 in indices)) {
             indices[key1] = { row, col }
+
+            if (Object.keys(indices).length == target) {
+                break
+            }
         }
 
         if (row == col) {
+            continue
+        }
+
+        if(!(row < cols && col < rows)) {
             continue
         }
 
