@@ -27,13 +27,17 @@ Now 10 ** 9 can be highest gained confidence for certain block, which can be eas
 
 Remaining **28 bytes** from MSB side kept for putting block number.
 
-Deserialisation logic is written in `DAOracle.deserialise(...)`, which will be invoked when chainlink node will fulfil request.
-
-Finally you can check `confidence` public associative array for querying confidence for guevn block number.
+---
 
 Here's one visual
 
 ![confidence-serialisation](../sc/serialised-confidence.jpg)
+
+---
+
+Deserialisation logic is written in `DAOracle.deserialise(...)`, which will be invoked when chainlink node will fulfil request.
+
+Finally you can check `confidence` public associative array for querying confidence for guevn block number.
 
 ## Deployment Details
 
@@ -44,6 +48,51 @@ Contract | Address
 LINK Token | `0x70d1F773A9f81C852087B77F6Ae6d3032B02D2AB`
 Chainlink Oracle | `0x1cf7D49BE7e0c6AC30dEd720623490B64F572E17`
 DA Oracle | `0x21e2B87EFb7638994360CCFd35e2f7a658213b32`
+
+## Usage
+
+As a contract developer you probably want to use DAOracle for checking block confidence, which can be done by 
+
+- Invoking `requestConfidence` method --- **Fetches confidence via offchain oracle network**
+- Querying `confidence` --- **Read min, max, latest confidence factors**
+
+You can use this interface
+
+```js
+interface IDAOracle {
+    function requestConfidence(uint256 block_) external; // 1st
+    function confidence(uint256 block_) external view returns (uint256, uint256, uint256, bool); // 2nd
+}
+```
+
+When querying `confidence`, response looks like
+
+> `exists` field will be `false` only when for block **B** confidence was never requested i.e. **No Record Found**
+
+```json
+[
+    {
+          "internalType": "uint256",
+          "name": "max",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "min",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "recent",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        }
+]
+```
 
 ## Utilities
 
