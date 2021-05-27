@@ -15,6 +15,14 @@ contract DAConsumer {
         oracle = oracle_;
     }
     
+    function approved() external view returns (uint256) {
+        return LinkTokenInterface(token).allowance(address(this), oracle);
+    }
+    
+    function balance() external view returns (uint256) {
+        return LinkTokenInterface(token).balanceOf(address(this));
+    }
+    
     function approve(uint256 amount_) external {
         require(LinkTokenInterface(token).approve(oracle, amount_), "LINK token approval failed");
     }

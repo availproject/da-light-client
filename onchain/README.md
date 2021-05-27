@@ -51,12 +51,12 @@ DA Oracle | `0x21e2B87EFb7638994360CCFd35e2f7a658213b32`
 
 ## Usage
 
-As a contract developer you probably want to use DAOracle for checking block confidence, which can be done by 
+As a contract developer you probably want to use DAOracle for checking block confidence, which can be done by
 
 - Invoking `requestConfidence` method --- **Fetches confidence via offchain oracle network**
 - Querying `confidence` --- **Read min, max, latest confidence factors**
 
-You can use this interface
+You can use this [interface](./contracts/IDAOracle.sol) in your smart contract
 
 ```js
 interface IDAOracle {
@@ -93,6 +93,20 @@ When querying `confidence`, response looks like
         }
 ]
 ```
+
+But calling `DAOracle.requestConfidence` will revert if you haven't approved enough LINK token for Oracle to transfer to self.
+
+Here's an [example](./contracts/DAConsumer.sol) smart contract demostrating how to interact with `DAOracle`.
+
+1) First `approve(...)` DAOracle to use **X** LINK token
+2) Invoke `requestDABlockConfidence(...)` with block number of interest
+3) After request is fulfilled, invoke `queryDABlockConfidence(...)` to use block confidence for executing other business logic
+
+> **X** LINK token >= #-of-times-block-confidence-requested *  10 ** 16
+
+> Offchain oracle network may have **N** -active nodes, each of them to be requested for fetching block confidence
+
+> Each offchain oracle node demands 10 ** 16 token for each block confidence request fulfilment
 
 ## Utilities
 

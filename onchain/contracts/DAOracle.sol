@@ -27,7 +27,7 @@ contract DAOracle is ChainlinkClient, AccessControl {
     address public oracle;
     uint256 public fee;
     address public token;
-
+    
     event LightClientUpdated(bytes32 jobId, string url, bool enabled);
     event OracleUpdated(address old_, address new_);
     event FeeUpdated(uint256 old_, uint256 new_);
@@ -36,7 +36,7 @@ contract DAOracle is ChainlinkClient, AccessControl {
     
     constructor(address token_) {
         setChainlinkToken(token_);
-
+        
         token = token_;
         oracle = 0x1cf7D49BE7e0c6AC30dEd720623490B64F572E17;
         fee = 10 ** 16;
@@ -116,6 +116,15 @@ contract DAOracle is ChainlinkClient, AccessControl {
         for(uint256 i = 0; i < jobList.length; i++) {
             bytes32 jobId = jobList[i];
             LightClient memory lc = jobs[jobId];
+            if(lc.use) {
+                totalFee += fee;
+            }
+        }
+        require(LinkTokenInterface(token).transferFrom(msg.sender, address(this), totalFee), "Enough LINK token not approved");
+        
+        for(uint256 i = 0; i < jobList.length; i++) {
+            bytes32 jobId = jobList[i];
+            LightClient memory lc = jobs[jobId];
             if(!lc.use) {
                 continue;
             }
@@ -124,12 +133,9 @@ contract DAOracle is ChainlinkClient, AccessControl {
             request.add("get", getQueryURL(lc.url, block_));
             request.add("path", "result.serialisedConfidence");
             bytes32 requestId = sendChainlinkRequestTo(oracle, request, fee);
-            totalFee += fee;
-            
+
             emit BlockConfidenceRequest(block_, requestId);
         }
-
-        LinkTokenInterface(token).transferFrom(msg.sender, address(this), totalFee);
     }
 
     function deserialise(uint256 serialisedConfidence) internal pure returns (uint256, uint256) {
