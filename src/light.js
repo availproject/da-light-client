@@ -109,7 +109,9 @@ class LightClient {
             }
 
             const blockNumber = block.block.header.number
-            const indices = generateRandomDataMatrixIndices()
+            const indices = generateRandomDataMatrixIndices(
+                parseInt(block.block.header.extrinsicsRoot.rows),
+                parseInt(block.block.header.extrinsicsRoot.cols))
             const commitment = [...block.block.header.extrinsicsRoot.commitment]
             const proof = await this.askProof(blockNumber, indices)
 

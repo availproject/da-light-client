@@ -15,7 +15,9 @@ const setUp = async _ => {
         types: {
             ExtrinsicsRoot: {
                 hash: 'Hash',
-                commitment: 'Vec<u8>'
+                commitment: 'Vec<u8>',
+                rows: 'u16',
+                cols: 'u16'
             },
             Header: {
                 parentHash: 'Hash',

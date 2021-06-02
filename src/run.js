@@ -25,7 +25,9 @@ const startLightClient = async _ => {
         console.log(`🛠   Verifying block : ${header.number}`)
 
         const blockNumber = header.number
-        const indices = generateRandomDataMatrixIndices()
+        const indices = generateRandomDataMatrixIndices(
+            parseInt(header.extrinsicsRoot.rows),
+            parseInt(header.extrinsicsRoot.cols))
         const commitment = [...header.extrinsicsRoot.commitment]
         const proof = await lc.askProof(blockNumber, indices)
 
