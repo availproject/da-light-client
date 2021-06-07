@@ -37,10 +37,15 @@ class LightClient {
         try {
 
             const ret = verifyProof(parseInt(blockNumber), getRows(indices), getColumns(indices), commitment, proof)
-            this.state.setConfidence(BigInt(blockNumber).toString(), ret)
+            if (ret > 0) {
+                this.state.setConfidence(BigInt(blockNumber).toString(), ret)
+                return true
+            }
 
+            throw Error('zero rounds passed')
         } catch (e) {
             console.log(`❌ Verification attempt failed for block ${BigInt(blockNumber)} : ${e.toString()}`)
+            return false
         }
     }
 
@@ -92,7 +97,6 @@ class LightClient {
     // to verify block by asking for `N` proof(s), in a batch call
     processBlockByNumber(num) {
         return new Promise(async (res, _) => {
-
             const start = new Date().getTime()
 
             console.log(`🛠   Verifying block : ${num}, on request`)
@@ -115,14 +119,15 @@ class LightClient {
             const commitment = [...block.block.header.extrinsicsRoot.commitment]
             const proof = await this.askProof(blockNumber, indices)
 
-            await this.verifyBlock(blockNumber, indices, commitment, proof)
+            const ret = await this.verifyBlock(blockNumber, indices, commitment, proof)
+            if (ret) {
+                console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}, on request`)
+            }
 
-            console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}, on request`)
             res({
-                status: 1,
+                status: ret ? 1 : 0,
                 block: num
             })
-
         })
     }
 

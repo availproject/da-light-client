@@ -33,7 +33,6 @@ WSURI=ws://localhost:9944
 AskProofCount=15
 BatchSize=10
 PORT=7000
-
 ```
 
 Environment Variable | Interpretation
