@@ -23,34 +23,32 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
     //
     // @note It can be time consuming for second case
     async function wrapperOnConfidenceFetcher(number) {
-
-        if (BigInt(number) < 1n) {
+        if (number < 1n) {
             return 0
         }
 
-        if (state.alreadyVerified(number)) {
-            return state.getConfidence(number)
+        if (state.alreadyVerified(number.toString(10))) {
+            return state.getConfidence(number.toString(10))
         }
 
-        if (state.latestBlock < BigInt(number)) {
+        if (state.latestBlock < number) {
             return 0
         }
 
-        const resp = await lc.processBlockByNumber(BigInt(number))
+        const resp = await lc.processBlockByNumber(number)
         if (resp.status != 1) {
             return 0
         }
 
-        return state.getConfidence(number)
-
+        return state.getConfidence(number.toString(10))
     }
 
     async function getConfidence(number) {
-        const confidence = await wrapperOnConfidenceFetcher(BigInt(number).toString(10))
+        const confidence = await wrapperOnConfidenceFetcher(BigInt(number))
         return {
             number: parseInt(number),
             confidence,
-            serialisedConfidence: serialiseConfidence(parseInt(number), Math.round(confidence * 10 ** 7))
+            serialisedConfidence: serialiseConfidence(number, Math.round(confidence * 10 ** 7))
         }
     }
 

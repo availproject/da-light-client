@@ -31,9 +31,9 @@ const startLightClient = async _ => {
         const commitment = [...header.extrinsicsRoot.commitment]
         const proof = await lc.askProof(blockNumber, indices)
 
-        await lc.verifyBlock(blockNumber, indices, commitment, proof)
-
-        console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
+        if (await lc.verifyBlock(blockNumber, indices, commitment, proof)) {
+            console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
+        }
 
     })
 
