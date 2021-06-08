@@ -719,9 +719,6 @@ fn kc_verify_proof_wrapper(
     } else {
         println!("❌  Failed for cell ({:>3}, {:>3}) of #{}", row, col, block);
     }
-    else {
-        println!("➕  Verification failed: cell ({:>3}, {:>3}) of #{}", row, col, block);
-    }
 
     status
 }

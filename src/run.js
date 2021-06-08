@@ -25,13 +25,15 @@ const startLightClient = async _ => {
         console.log(`🛠   Verifying block : ${header.number}`)
 
         const blockNumber = header.number
+        const totalRows = header.extrinsicsRoot.rows
+        const totalCols = header.extrinsicsRoot.cols
         const indices = generateRandomDataMatrixIndices(
-            parseInt(header.extrinsicsRoot.rows),
-            parseInt(header.extrinsicsRoot.cols))
+            parseInt(totalRows),
+            parseInt(totalCols))
         const commitment = [...header.extrinsicsRoot.commitment]
         const proof = await lc.askProof(blockNumber, indices)
 
-        if (await lc.verifyBlock(blockNumber, indices, commitment, proof)) {
+        if (await lc.verifyBlock(blockNumber, totalRows, totalCols, indices, commitment, proof)) {
             console.log(`✅ Verified block : ${header.number} in ${humanizeDuration(new Date().getTime() - start)}`)
         }
 
