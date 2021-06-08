@@ -716,6 +716,8 @@ fn kc_verify_proof_wrapper(
     let status = kc_verify_proof(col, proof, commitment, total_rows, total_cols);
     if status {
         println!("➕  Verified cell ({:>3}, {:>3}) of #{}", row, col, block);
+    } else {
+        println!("❌  Failed for cell ({:>3}, {:>3}) of #{}", row, col, block);
     }
     else {
         println!("➕  Verification failed: cell ({:>3}, {:>3}) of #{}", row, col, block);
