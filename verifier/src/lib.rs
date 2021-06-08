@@ -16,7 +16,7 @@ use std::convert::TryInto;
 // code for light client to verify incoming kate proofs
 // args - now - column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
 // args - in future - multiple sets of these
-fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool {
+fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>, total_rows: usize, total_cols: usize) -> bool {
     let params = vec![
         178, 84, 164, 248, 187, 227, 126, 84, 84, 157, 147, 116, 228, 246, 78, 83, 95, 179, 181,
         97, 166, 109, 68, 108, 111, 211, 186, 151, 5, 185, 234, 30, 81, 196, 188, 1, 2, 186, 217,
@@ -659,9 +659,9 @@ fn kc_verify_proof(col_num: u8, response: Vec<u8>, commitment: Vec<u8>) -> bool 
         26, 165, 51, 105, 250, 223, 141, 94, 8, 156,
     ];
 
-    let total_rows = 128;
+    // let total_rows = 128;
     let _extended_total_rows = total_rows * 2;
-    let total_cols = 256;
+    // let total_cols = 256;
 
     let public_params = kzg10::PublicParameters::from_bytes(params.as_slice()).unwrap();
     let (_, verifier_key) = public_params.trim(total_cols).unwrap();
@@ -708,12 +708,17 @@ fn kc_verify_proof_wrapper(
     row: u8,
     col: u8,
     block: u64,
+    total_rows: usize,
+    total_cols: usize,
     proof: Vec<u8>,
     commitment: Vec<u8>,
 ) -> bool {
-    let status = kc_verify_proof(col, proof, commitment);
+    let status = kc_verify_proof(col, proof, commitment, total_rows, total_cols);
     if status {
         println!("➕  Verified cell ({:>3}, {:>3}) of #{}", row, col, block);
+    }
+    else {
+        println!("➕  Verification failed: cell ({:>3}, {:>3}) of #{}", row, col, block);
     }
 
     status
@@ -722,6 +727,8 @@ fn kc_verify_proof_wrapper(
 #[no_mangle]
 pub extern "C" fn verify_proof(
     block: u64,
+    total_rows: size_t,
+    total_cols: size_t,
     rows: *const u8,
     rows_len: size_t,
     cols: *const u8,
@@ -785,6 +792,8 @@ pub extern "C" fn verify_proof(
                 row as u8,
                 *col,
                 block,
+                total_rows,
+                total_cols,
                 _proof,
                 _commitment,
             ))

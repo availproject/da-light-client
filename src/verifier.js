@@ -6,13 +6,13 @@ const U8Array = array(ref.types.uint8)
 
 // Creating interface to be used for calling verifier
 const lib = ffi.Library('libverifier', {
-    verify_proof: ['uint8', ['uint64', U8Array, 'size_t', U8Array, 'size_t', U8Array, 'size_t', U8Array, 'size_t']],
+    verify_proof: ['uint8', ['uint64', 'size_t', 'size_t', U8Array, 'size_t', U8Array, 'size_t', U8Array, 'size_t', U8Array, 'size_t']],
 })
 
 module.exports = {
 
     // Returns how many proof verification attempts were successful as `u8`
-    verifyProof: (block, rows, cols, commitment, proof) => {
+    verifyProof: (block, totalRows, totalCols, rows, cols, commitment, proof) => {
 
         const _rows = U8Array(rows)
         const _cols = new U8Array(cols)
@@ -20,7 +20,9 @@ module.exports = {
         const _proof = new U8Array(proof)
 
         return lib.verify_proof(
-            block, _rows, _rows.length,
+            block, 
+            totalRows, totalCols,
+            _rows, _rows.length,
             _cols, _cols.length,
             _commitment, _commitment.length,
             _proof, _proof.length)

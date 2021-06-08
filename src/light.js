@@ -33,10 +33,10 @@ class LightClient {
     // Given a block, which is already fetched, attempts to
     // verify block content by checking commitment & proof asked by
     // cell indices
-    verifyBlock(blockNumber, indices, commitment, proof) {
+    verifyBlock(blockNumber, totalRows, totalCols, indices, commitment, proof) {
         try {
-
-            const ret = verifyProof(parseInt(blockNumber), getRows(indices), getColumns(indices), commitment, proof)
+            
+            const ret = verifyProof(parseInt(blockNumber), parseInt(totalRows), parseInt(totalCols), getRows(indices), getColumns(indices), commitment, proof)
             if (ret > 0) {
                 this.state.setConfidence(BigInt(blockNumber).toString(), ret)
                 return true
@@ -114,13 +114,15 @@ class LightClient {
             }
 
             const blockNumber = block.block.header.number
+            const totalRows = block.block.header.extrinsicsRoot.rows
+            const totalCols = block.block.header.extrinsicsRoot.cols
             const indices = generateRandomDataMatrixIndices(
-                parseInt(block.block.header.extrinsicsRoot.rows),
-                parseInt(block.block.header.extrinsicsRoot.cols))
+                parseInt(totalRows),
+                parseInt(totalCols))
             const commitment = [...block.block.header.extrinsicsRoot.commitment]
             const proof = await this.askProof(blockNumber, indices)
 
-            const status = await this.verifyBlock(blockNumber, indices, commitment, proof)
+            const status = await this.verifyBlock(blockNumber, totalRows, totalCols, indices, commitment, proof)
             if (status) {
                 console.log(`✅ Verified block : ${num} in ${humanizeDuration(new Date().getTime() - start)}, on request`)
             }
