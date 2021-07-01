@@ -1,13 +1,8 @@
-const humanizeDuration = require('humanize-duration')
-
 class BlockConfidence {
 
     constructor() {
         this.blocks = {}
-        this.startedBlock = 0n
         this.latestBlock = 0n
-        // this is milliseconds
-        this.startedAt = new Date().getTime()
     }
 
     alreadyVerified(number) {
@@ -26,10 +21,6 @@ class BlockConfidence {
         return (1 - (1 / Math.pow(2, this.blocks[number] || 0))) * 100
     }
 
-    done() {
-        return Object.keys(this.blocks).length
-    }
-
     updateLatest(num) {
         if (this.startedBlock == 0n) {
             this.startedBlock = num
@@ -37,11 +28,6 @@ class BlockConfidence {
 
         this.latestBlock = num
     }
-
-    uptime() {
-        return humanizeDuration(new Date().getTime() - this.startedAt)
-    }
-
 }
 
 module.exports = { BlockConfidence }

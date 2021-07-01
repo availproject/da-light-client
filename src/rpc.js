@@ -1,16 +1,12 @@
-const { JSONRPCServer } = require('json-rpc-2.0')
 const express = require('express')
 const cors = require('cors')
 const { serialiseConfidence } = require('./utils')
+const morgan = require('morgan')
 
 const port = process.env.PORT || 7000
-
 let state, lc
-const server = new JSONRPCServer()
 
-// Supported JSON-RPC method, where given decimal block number ( as utf-8 string )
-// returns confidence associated with it
-server.addMethod('get_blockConfidence', async ({ number }) => {
+const lookupConfidence = async number => {
 
     // This is a closure hook, which will be invoked before
     // responding to obtained confidence RPC query
@@ -62,69 +58,24 @@ server.addMethod('get_blockConfidence', async ({ number }) => {
                 confidence: 0,
                 error: 'Block number must be number/ string'
             }
-})
-
-server.addMethod('get_progress', _ => {
-
-    return {
-        verified: state.done().toString(),
-        startedBlock: state.startedBlock.toString(),
-        latestBlock: state.latestBlock.toString(),
-        uptime: state.uptime()
-    }
-
-})
-
-const app = express()
-app.use(express.json())
-app.use(cors())
-
-app.post('/v1/json-rpc', (req, res) => {
-
-    console.log(`⚡️ Received JSON-RPC request from ${req.ip} at ${new Date().toISOString()}`)
-
-    server.receive(req.body).then((jsonRPCResp) => {
-        if (jsonRPCResp) {
-            res.json(jsonRPCResp)
-        } else {
-            res.sendStatus(204)
-        }
-    })
-
-})
-
-app.get('/v1/confidence/:block', (req, res) => {
-
-    console.log(`⚡️ Block Confidence ${req.params.block} | ${req.ip} | ${new Date().toISOString()}`)
-
-    let body = {
-        jsonrpc: "2.0",
-        method: "get_blockConfidence",
-        params: { number: req.params.block },
-        id: 1
-    }
-    server.receive(body).then((jsonRPCResp) => {
-        if (jsonRPCResp) {
-            res.json(jsonRPCResp)
-        } else {
-            res.sendStatus(204)
-        }
-    })
-
-})
+}
 
 const startServer = (_state, _lc) => {
-
-    // Initialising state holder, so that JSON-RPC queries can be
-    // answered
+    // Initialising state holder, so that queries can be answered
     state = _state
     lc = _lc
-    // Starting JSON-RPC server
-    app.listen(port, _ => {
-        console.log(`✅ Running JSON-RPC server @ http://localhost:${port}`)
+
+    const app = express()
+    app.use(cors())
+    app.use(morgan('short'))
+
+    app.get('/v1/confidence/:block', async (req, res) => {
+        res.status(200).json(await lookupConfidence(req.params.block))
     })
 
-
+    app.listen(port, _ => {
+        console.log(`✅ Running server @ http://localhost:${port}`)
+    })
 }
 
 module.exports = { startServer }
