@@ -50,21 +50,17 @@ make run
 
 ## Usage
 
-1. Given block number ( as _(hexa-)_ decimal number/ string ) returns confidence obtained by light client for this block
+Given block number ( as _(hexa-)_ decimal number ) returns confidence obtained by light client for this block
 
 ```bash
-curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_blockConfidence","params": {"number": 223}, "id": 1}' http://localhost:7000/v1/json-rpc | jq
+curl -s localhost:7000/v1/confidence | jq
 ```
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
     "number": 223,
     "confidence": 99.90234375,
     "serialisedConfidence": "958776730446"
-  }
 }
 ```
 
@@ -72,63 +68,4 @@ curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_b
 
 **Note :** Serialised confidence has been added recently so that it can be consumed by smart contract light client. This field is computed as below
 
-> `blockNumber << 32 | confidence`, where confidence is represented as out of 10 ** 9
-
-That's what [`serialiseConfidence()`](./src/utils.js) does.
-
-Deserialisation to be handled on-chain.
-
----
-
-If you need GET API, you can use
-
-```bash
-curl -s localhost:7000/v1/confidence/<blockNumber> | jq
-```
-
-Response schema same as above.
-
----
-
-For malformed block numbers, following will be responded with
-
-```bash
-curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_blockConfidence","params": {"number": true}, "id": 1}' http://localhost:7000/v1/json-rpc | jq # Block number is intentionally sent as `boolean`
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "number": true,
-    "confidence": 0,
-    "error": "Block number must be number/ string"
-  }
-}
-```
-
-> Note : You'll receive `0 %` in response, when no verification is yet done for requested block.
-
----
-
-2. Get progress using
-
-```bash
-curl -s -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"get_progress", "id": 1}' http://localhost:7000/v1/json-rpc | jq
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "verified": "1",
-    "startedBlock": "51336",
-    "latestBlock": "51337",
-    "uptime": "10.832 seconds"
-  }
-}
-```
-
-**More info coming ...**
+> `blockNumber << 32 | int32(confidence * 10 ** 7)`, where confidence is represented as out of 10 ** 9
