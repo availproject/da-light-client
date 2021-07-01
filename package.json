@@ -28,6 +28,7 @@
     "ffi-napi": "^4.0.1",
     "humanize-duration": "^3.25.1",
     "json-rpc-2.0": "^0.2.15",
+    "morgan": "^1.10.0",
     "ref-array-di": "^1.2.2"
   }
 }
