@@ -18,3 +18,4 @@ rand = "*"
 dusk-plonk = { git = "https://github.com/dusk-network/plonk", tag = "v0.3.5" }
 regex = "1.5"
 hex = "0.4"
+num = "0.4.0"

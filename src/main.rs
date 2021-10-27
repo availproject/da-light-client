@@ -6,6 +6,7 @@ use serde_json;
 use hyper;
 use std::collections::{HashSet};
 use rand::{thread_rng, Rng};
+use num::{BigUint, FromPrimitive};
 mod proof;
 mod rpc;
 
@@ -150,6 +151,11 @@ pub async fn main() -> Result<()> {
                     num
                     
                 );
+
+                let conf = calculate_confidence(count);
+                let serialised_conf = serialised_confidence(*num, conf);
+
+                println!("block: {}, confidence: {}, serialisedConfidence {}", *num, conf, serialised_conf);
             },
             Err(error) => println!("Misconstructed Header: {:?}", error)
         }
@@ -245,4 +251,16 @@ pub async fn get_kate_proof(
     let proof: BlockProofResponse = serde_json::from_slice(&body).unwrap();
     fill_cells_with_proofs(&mut cells, &proof);
     Ok(cells)
+}
+
+fn calculate_confidence(count: u32) -> f64 {
+    100f64 * (1f64 - 1f64 / 2u32.pow(count) as f64)
+}
+
+fn serialised_confidence(block: u64, factor: f64) -> String {
+    let _block: BigUint = FromPrimitive::from_u64(block).unwrap();
+    let _factor: BigUint =
+        FromPrimitive::from_u64((10f64.powi(7) * factor) as u64).unwrap();
+    let _shifted: BigUint = _block << 32 | _factor;
+    _shifted.to_str_radix(10)
 }
