@@ -1,0 +1,248 @@
+use tokio::io::{AsyncWriteExt, Result};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use futures_util::{StreamExt, SinkExt};
+use serde::{Deserialize, Deserializer};
+use serde_json;
+use hyper;
+use std::collections::{HashSet};
+use rand::{thread_rng, Rng};
+mod proof;
+mod rpc;
+
+#[derive(Deserialize, Debug)]
+pub struct Header {
+    number: String,
+    #[serde(rename = "extrinsicsRoot")]
+    pub extrinsics_root: ExtrinsicsRoot,
+    #[serde(rename = "parentHash")]
+    parent_hash: String,
+    #[serde(rename = "stateRoot")]
+    state_root: String,
+    digest: Digest,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ExtrinsicsRoot {
+    pub cols: u16,
+    pub rows: u16,
+    pub hash: String,
+    pub commitment: Vec<u8>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Digest {
+    logs: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct QueryResult {
+    result: Header,
+    subscription: String
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Response {
+    jsonrpc: String,
+    method: String,
+    pub params: QueryResult,
+}
+
+// #[derive(Default, Debug)]
+// pub struct Cell {
+//     pub block: u64,
+//     pub row: u16,
+//     pub col: u16,
+//     pub proof: Vec<u8>,
+// }
+
+#[derive(Hash, Eq, PartialEq)]
+pub struct MatrixCell {
+    row: u16,
+    col: u16,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct BlockProofResponse {
+    jsonrpc: String,
+    id: u32,
+    result: Vec<u8>,
+}
+
+
+#[tokio::main]
+pub async fn main() -> Result<()> {
+
+    let url = url::Url::parse("ws://localhost:9944").unwrap();
+
+    let (ws_stream, _response) = connect_async(url).await.expect("Failed to connect");
+    println!("Connected to Substrate Node");
+
+    let (mut write, mut read) = ws_stream.split();
+
+    write.send(Message::Text(r#"{
+        "id":1, 
+        "jsonrpc":"2.0", 
+        "method": "subscribe_newHead"
+    }"#.to_string()+"\n")).await.unwrap();
+
+    // println!("Subscription Request Sent");
+
+    let subscription_result = read.next().await.unwrap().unwrap().into_data();
+    // tokio::io::stdout().write(&subscription_result).await.unwrap();
+    // println!("\nSubscription Done!");
+
+    let read_future = read.for_each(|message| async {
+        // println!("receiving...");
+        let data = message.unwrap().into_data();
+        // tokio::io::stdout().write(&data).await.unwrap();
+        // println!("received...");
+        match serde_json::from_slice(&data) {
+            Ok(response) => {
+                let response: Response = response;
+                // println!("\n{:?}", response.params.result);
+                let block_number = response.params.result.number;
+                // let bl = hex::decode(&block_number);
+                // println!("hexed value: {:?}",bl);
+                let raw = &block_number;
+                let without_prefix = raw.trim_start_matches("0x");
+                let z = u64::from_str_radix(without_prefix, 16);
+                // let src: &str = &block_number;
+                // let bl = hex::decode(&src[2..]);
+                 let num = &z.unwrap();
+                //  println!("hexd {:?}",num);
+                
+
+                // let v:u64 = serde_json::from_str(&block_number).unwrap();
+                // let blo = block_number.parse::<u64>().unwrap();
+                //  println!("blo number :{:?}",block_number);
+                let max_rows = response.params.result.extrinsics_root.rows;
+                let max_cols = response.params.result.extrinsics_root.cols;
+                let commitment = response.params.result.extrinsics_root.commitment;
+                let mut cells = generate_random_cells(max_rows, max_cols);
+                let payload = generate_kate_query_payload(block_number, &cells);
+                let req = hyper::Request::builder()
+                    .method(hyper::Method::POST)
+                    .uri("http://localhost:9933")
+                    .header("Content-Type", "application/json")
+                    .body(hyper::Body::from(payload))
+                    .unwrap();
+                let resp = {
+                    let client = hyper::Client::new();
+                    client.request(req).await.unwrap()
+                };
+                let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
+                let proof: BlockProofResponse = serde_json::from_slice(&body).unwrap();
+                fill_cells_with_proofs(&mut cells, &proof);
+                // println!("Proof: {:?}", proof);
+                // println!("cells: {:?}",cells);
+
+
+                // let cells = get_kate_proof(block_number, max_rows, max_cols).await.unwrap();
+                let count = proof::verify_proof(
+                    max_rows,
+                    max_cols,
+                    &cells,
+                    &commitment,
+                );
+                println!(
+                    "✅ Completed {} rounds of verification for block number {} ",
+                    count,
+                    num
+                    
+                );
+            },
+            Err(error) => println!("Misconstructed Header: {:?}", error)
+        }
+
+        // hacky way of extracting number from header
+        // ideal: use header type and serde to typecast bytestring to header
+        // real: find "number" string and extract the number from header
+        // let message_as_str = String::from_utf8_lossy(&data);
+        // let index_number = message_as_str.find("number");
+        // match index_number {
+        //     Some(index_of_number) => {
+        //         // hack: find where the number field ends by searching the closing " 
+        //         let index_of_number_end = message_as_str[(index_of_number+9)..].find('"').unwrap();
+        //         let number = &message_as_str[(index_of_number+9)..(index_of_number+9+index_of_number_end)];
+        //         println!("Number: {:?}", number);
+
+        //         // Fetch kate proof for a cell of that block (by number)
+        //     }
+        //     None => println!("Number not found in the header!")
+        // }
+    });
+
+    read_future.await;
+
+    Ok(())
+}
+
+
+
+pub fn generate_random_cells(max_rows: u16, max_cols: u16) -> Vec<proof::Cell> {
+    let count: u16 = if max_rows * max_cols < 8 {
+        max_rows * max_cols
+    } else {
+        8
+    };
+    let mut rng = thread_rng();
+    let mut indices = HashSet::new();
+    while (indices.len() as u16) < count {
+        let row = rng.gen::<u16>() % max_rows;
+        let col = rng.gen::<u16>() % max_cols;
+        indices.insert(MatrixCell { row: row, col: col });
+    }
+
+    let mut buf = Vec::new();
+    for index in indices {
+        buf.push(proof::Cell {
+            row: index.row,
+            col: index.col,
+            ..Default::default()
+        });
+    }
+    buf
+}
+
+pub fn generate_kate_query_payload(block: String, cells: &Vec<proof::Cell>) -> String {
+    let mut query = Vec::new();
+    for cell in cells {
+        query.push(format!(r#"{{"row": {}, "col": {}}}"#, cell.row, cell.col));
+    }
+    format!(
+        r#"{{"id": 1, "jsonrpc": "2.0", "method": "kate_queryProof", "params": ["{}", [{}]]}}"#,
+        block,
+        query.join(", ")
+    )
+}
+
+pub fn fill_cells_with_proofs(cells: &mut Vec<proof::Cell>, proof: &BlockProofResponse) {
+    assert_eq!(80 * cells.len(), proof.result.len());
+    for i in 0..cells.len() {
+        let mut v = Vec::new();
+        v.extend_from_slice(&proof.result[i * 80..i * 80 + 80]);
+        cells[i].proof = v;
+    }
+}
+pub async fn get_kate_proof(
+    block: String,
+    max_rows: u16,
+    max_cols: u16,
+) -> Result<Vec<proof::Cell>, > {
+    let mut cells = generate_random_cells(max_rows, max_cols);
+    let payload = generate_kate_query_payload(block, &cells);
+    let req = hyper::Request::builder()
+        .method(hyper::Method::POST)
+        .uri("http://localhost:9933")
+        .header("Content-Type", "application/json")
+        .body(hyper::Body::from(payload))
+        .unwrap();
+        let resp = {
+            let client = hyper::Client::new();
+            client.request(req).await.unwrap()
+        };
+    let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
+    let proof: BlockProofResponse = serde_json::from_slice(&body).unwrap();
+    fill_cells_with_proofs(&mut cells, &proof);
+    Ok(cells)
+}
