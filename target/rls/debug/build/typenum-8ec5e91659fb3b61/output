@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/kroos/matic/da-light-client/target/rls/debug/build/typenum-8ec5e91659fb3b61/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/home/kroos/matic/da-light-client/target/rls/debug/build/typenum-8ec5e91659fb3b61/out/op.rs

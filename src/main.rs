@@ -4,8 +4,9 @@ use futures_util::{StreamExt, SinkExt};
 use serde::{Deserialize, Deserializer};
 use serde_json;
 use hyper;
-use std::collections::{HashSet};
+use std::collections::{HashMap, HashSet};
 use rand::{thread_rng, Rng};
+use std::sync::{Arc, Mutex};
 use num::{BigUint, FromPrimitive};
 mod proof;
 mod rpc;
@@ -69,9 +70,12 @@ pub struct BlockProofResponse {
     result: Vec<u8>,
 }
 
-
 #[tokio::main]
 pub async fn main() -> Result<()> {
+    let mut sto:HashMap<u64, u32> = HashMap::new();
+    fn set_confidence(block: u64, count: u32) {
+        store.insert(block, count);
+    }
 
     let url = url::Url::parse("ws://localhost:9944").unwrap();
 
@@ -154,6 +158,7 @@ pub async fn main() -> Result<()> {
 
                 let conf = calculate_confidence(count);
                 let serialised_conf = serialised_confidence(*num, conf);
+                set_confidence(*num, count);
 
                 println!("block: {}, confidence: {}, serialisedConfidence {}", *num, conf, serialised_conf);
             },
@@ -252,6 +257,8 @@ pub async fn get_kate_proof(
     fill_cells_with_proofs(&mut cells, &proof);
     Ok(cells)
 }
+
+
 
 fn calculate_confidence(count: u32) -> f64 {
     100f64 * (1f64 - 1f64 / 2u32.pow(count) as f64)
