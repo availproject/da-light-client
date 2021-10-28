@@ -72,10 +72,6 @@ pub struct BlockProofResponse {
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    let mut sto:HashMap<u64, u32> = HashMap::new();
-    fn set_confidence(block: u64, count: u32) {
-        store.insert(block, count);
-    }
 
     let url = url::Url::parse("ws://localhost:9944").unwrap();
 
@@ -158,8 +154,8 @@ pub async fn main() -> Result<()> {
 
                 let conf = calculate_confidence(count);
                 let serialised_conf = serialised_confidence(*num, conf);
-                set_confidence(*num, count);
-
+                let mut sto:HashMap<u64, f64> = HashMap::new();
+                sto.insert(*num, conf);
                 println!("block: {}, confidence: {}, serialisedConfidence {}", *num, conf, serialised_conf);
             },
             Err(error) => println!("Misconstructed Header: {:?}", error)
