@@ -95,12 +95,12 @@ pub async fn main() -> Result<()> {
     let read_future = read.for_each(|message| async {
         // println!("receiving...");
         let data = message.unwrap().into_data();
-        // tokio::io::stdout().write(&data).await.unwrap();
+        tokio::io::stdout().write(&data).await.unwrap();
         // println!("received...");
         match serde_json::from_slice(&data) {
             Ok(response) => {
                 let response: Response = response;
-                // println!("\n{:?}", response.params.result);
+                println!("\n{:?}", response.params.result);
                 let block_number = response.params.result.number;
                 // let bl = hex::decode(&block_number);
                 // println!("hexed value: {:?}",bl);

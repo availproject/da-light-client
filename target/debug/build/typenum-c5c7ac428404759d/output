@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/Users/kroos/Matic/pb-light/avail-rust-light-client/target/debug/build/typenum-c5c7ac428404759d/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/Users/kroos/Matic/pb-light/avail-rust-light-client/target/debug/build/typenum-c5c7ac428404759d/out/op.rs
