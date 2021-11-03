@@ -704,7 +704,6 @@ fn kc_verify_proof(col_num: u16, response: &Vec<u8>, commitment: &Vec<u8>, total
 fn kc_verify_proof_wrapper(
     row: u16,
     col: u16,
-    block: u64,
     total_rows: usize,
     total_cols: usize,
     proof: &Vec<u8>,
@@ -729,7 +728,6 @@ pub fn verify_proof(
     let mut count: u32 = 0;
 
     for cell in cells {
-        let block = cell.block;
         let row = cell.row;
         let col = cell.col;
         let _proof = &cell.proof;
@@ -740,7 +738,6 @@ pub fn verify_proof(
         if kc_verify_proof_wrapper(
             row,
             col,
-            block,
             total_rows.into(),
             total_cols.into(),
             _proof,

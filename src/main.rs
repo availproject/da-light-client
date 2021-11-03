@@ -21,6 +21,8 @@ pub struct Header {
     #[serde(rename = "stateRoot")]
     state_root: String,
     digest: Digest,
+    #[serde(rename = "appDataLookup")]
+    pub app_data_lookup: AppDataIndex,
 }
 
 #[derive(Deserialize, Debug)]
@@ -29,6 +31,12 @@ pub struct ExtrinsicsRoot {
     pub rows: u16,
     pub hash: String,
     pub commitment: Vec<u8>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AppDataIndex{
+    pub size: u32,
+    pub index: Vec<(u32, u32)>
 }
 
 #[derive(Deserialize, Debug)]
@@ -95,7 +103,7 @@ pub async fn main() -> Result<()> {
     let read_future = read.for_each(|message| async {
         // println!("receiving...");
         let data = message.unwrap().into_data();
-        tokio::io::stdout().write(&data).await.unwrap();
+        // tokio::io::stdout().write(&data).await.unwrap();
         // println!("received...");
         match serde_json::from_slice(&data) {
             Ok(response) => {
@@ -119,17 +127,33 @@ pub async fn main() -> Result<()> {
                 let max_rows = response.params.result.extrinsics_root.rows;
                 let max_cols = response.params.result.extrinsics_root.cols;
                 let commitment = response.params.result.extrinsics_root.commitment;
-                let mut cells = generate_random_cells(max_rows, max_cols);
+                let app_index = response.params.result.app_data_lookup.index;
+                //let mut cells = generate_random_cells(max_rows, max_cols);
+                let mut cells = if app_index.is_empty(){
+                    // println!("\n\n true \n\n");
+                     let cpy = generate_random_cells(max_rows, max_cols);
+                     cpy
+                }
+                else{
+                    let app_tup = app_index[0];
+                    let app_rows= app_tup.0;
+                    let app_cols= app_tup.1;
+                    let cpy = generate_app_specific_cells(app_rows, app_cols, *num);
+                    cpy
+
+                };
+                // let app_tup = app_index[0];
+                println!("cells after if-else check {:?}", cells);
                 let payload = generate_kate_query_payload(block_number, &cells);
                 let req = hyper::Request::builder()
-                    .method(hyper::Method::POST)
-                    .uri("http://localhost:9933")
-                    .header("Content-Type", "application/json")
-                    .body(hyper::Body::from(payload))
-                    .unwrap();
+                .method(hyper::Method::POST)
+                .uri("http://localhost:9933")
+                .header("Content-Type", "application/json")
+                .body(hyper::Body::from(payload))
+                .unwrap();
                 let resp = {
-                    let client = hyper::Client::new();
-                    client.request(req).await.unwrap()
+                let client = hyper::Client::new();
+                client.request(req).await.unwrap()
                 };
                 let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
                 let proof: BlockProofResponse = serde_json::from_slice(&body).unwrap();
@@ -156,7 +180,7 @@ pub async fn main() -> Result<()> {
                 let serialised_conf = serialised_confidence(*num, conf);
                 let mut sto:HashMap<u64, f64> = HashMap::new();
                 sto.insert(*num, conf);
-                println!("block: {}, confidence: {}, serialisedConfidence {}", *num, conf, serialised_conf);
+                println!("block: {}, confidence: {}, serialisedConfidence {}", *num, conf, serialised_conf);  
             },
             Err(error) => println!("Misconstructed Header: {:?}", error)
         }
@@ -266,4 +290,15 @@ fn serialised_confidence(block: u64, factor: f64) -> String {
         FromPrimitive::from_u64((10f64.powi(7) * factor) as u64).unwrap();
     let _shifted: BigUint = _block << 32 | _factor;
     _shifted.to_str_radix(10)
+}
+
+pub fn generate_app_specific_cells(rows: u32, cols: u32, block:u64) -> Vec<proof::Cell>{
+    let mut buf = Vec::new();
+    buf.push(proof::Cell{
+        block:block, 
+        row: rows as u16, 
+        col: cols as u16,
+        ..Default::default()
+    });
+    buf
 }

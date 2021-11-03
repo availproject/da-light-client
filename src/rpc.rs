@@ -46,6 +46,8 @@ pub struct Header {
     #[serde(rename = "stateRoot")]
     state_root: String,
     digest: Digest,
+    #[serde(rename = "appDataLookup")]
+    pub app_data_lookup: AppDataIndex,
 }
 
 #[derive(Deserialize, Debug)]
@@ -59,6 +61,12 @@ pub struct ExtrinsicsRoot {
 #[derive(Deserialize, Debug)]
 pub struct Digest {
     logs: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct AppDataIndex{
+    pub size: u32,
+    pub index: Vec<(u32, u32)>
 }
 
 #[derive(Deserialize, Debug)]
@@ -179,6 +187,17 @@ pub fn generate_random_cells(max_rows: u16, max_cols: u16, block: u64) -> Vec<Ce
             ..Default::default()
         });
     }
+    buf
+}
+
+pub fn generate_app_specific_cells(rows: u32, cols: u32, block:u64) -> Vec<Cell>{
+    let mut buf = Vec::new();
+    buf.push(Cell{
+        block:block, 
+        row: rows as u16, 
+        col: cols as u16,
+        ..Default::default()
+    });
     buf
 }
 
