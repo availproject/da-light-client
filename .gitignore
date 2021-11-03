@@ -1,5 +1,4 @@
 target/
 Cargo.lock
-**/target/
 .cargo/
 .cargo-remote.toml
