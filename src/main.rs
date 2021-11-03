@@ -128,6 +128,7 @@ pub async fn main() -> Result<()> {
                 let max_cols = response.params.result.extrinsics_root.cols;
                 let commitment = response.params.result.extrinsics_root.commitment;
                 let app_index = response.params.result.app_data_lookup.index;
+                let app_size = response.params.result.app_data_lookup.size;
                 //let mut cells = generate_random_cells(max_rows, max_cols);
                 let mut cells = if app_index.is_empty(){
                     // println!("\n\n true \n\n");
@@ -136,9 +137,8 @@ pub async fn main() -> Result<()> {
                 }
                 else{
                     let app_tup = app_index[0];
-                    let app_rows= app_tup.0;
-                    let app_cols= app_tup.1;
-                    let cpy = generate_app_specific_cells(app_rows, app_cols, *num);
+                    let app_ind= app_tup.1;
+                    let cpy = generate_app_specific_cells(app_size, app_ind, max_rows, max_cols, *num);
                     cpy
 
                 };
@@ -292,13 +292,22 @@ fn serialised_confidence(block: u64, factor: f64) -> String {
     _shifted.to_str_radix(10)
 }
 
-pub fn generate_app_specific_cells(rows: u32, cols: u32, block:u64) -> Vec<proof::Cell>{
+pub fn generate_app_specific_cells(size:u32, index:u32,max_rows:u16, max_col:u16, block:u64) -> Vec<proof::Cell>{
     let mut buf = Vec::new();
-    buf.push(proof::Cell{
-        block:block, 
-        row: rows as u16, 
-        col: cols as u16,
-        ..Default::default()
-    });
+    let rows:u16 = 0;
+    for i  in 0..size{ 
+        let rows = if rows<max_rows{
+            index as u16/max_col
+        }else{
+            (index as u16/max_col) + i as u16
+        };
+        let cols = (index as u16%max_col) + i as u16;
+        buf.push(proof::Cell{
+            block:block, 
+            row: rows as u16, 
+            col: cols as u16,
+            ..Default::default()
+        });
+    }   
     buf
 }
