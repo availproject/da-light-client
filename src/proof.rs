@@ -8,12 +8,18 @@ pub struct Cell {
     pub row: u16,
     pub col: u16,
     pub proof: Vec<u8>,
-}// use dusk_bytes::Serializable;
+} // use dusk_bytes::Serializable;
 
 // code for light client to verify incoming kate proofs
 // args - now - column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
 // args - in future - multiple sets of these
-fn kc_verify_proof(col_num: u16, response: &Vec<u8>, commitment: &Vec<u8>, total_rows: usize, total_cols: usize) -> bool {
+fn kc_verify_proof(
+    col_num: u16,
+    response: &Vec<u8>,
+    commitment: &Vec<u8>,
+    total_rows: usize,
+    total_cols: usize,
+) -> bool {
     let params = vec![
         178, 84, 164, 248, 187, 227, 126, 84, 84, 157, 147, 116, 228, 246, 78, 83, 95, 179, 181,
         97, 166, 109, 68, 108, 111, 211, 186, 151, 5, 185, 234, 30, 81, 196, 188, 1, 2, 186, 217,
@@ -711,7 +717,7 @@ fn kc_verify_proof_wrapper(
 ) -> bool {
     let status = kc_verify_proof(col, proof, commitment, total_rows, total_cols);
     if status {
-        println!("\n➕  Verified cell ({:>3}, {:>3}) ", row, col );
+        println!("\n➕  Verified cell ({:>3}, {:>3}) ", row, col);
     } else {
         println!("\n❌  Failed for cell ({:>3}, {:>3}) ", row, col);
     }
@@ -723,7 +729,7 @@ pub fn verify_proof(
     total_rows: u16,
     total_cols: u16,
     cells: &Vec<Cell>,
-    commitment: &Vec<u8>
+    commitment: &Vec<u8>,
 ) -> u32 {
     let mut count: u32 = 0;
 
@@ -743,7 +749,7 @@ pub fn verify_proof(
             _proof,
             _commitment,
         ) {
-            count+=1;
+            count += 1;
         }
     }
 

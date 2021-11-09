@@ -1,13 +1,13 @@
-use tokio::io::{AsyncWriteExt, Result};
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures_util::{StreamExt, SinkExt};
+use futures_util::{SinkExt, StreamExt};
+use hyper;
+use num::{BigUint, FromPrimitive};
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Deserializer};
 use serde_json;
-use hyper;
 use std::collections::{HashMap, HashSet};
-use rand::{thread_rng, Rng};
 use std::sync::{Arc, Mutex};
-use num::{BigUint, FromPrimitive};
+use tokio::io::{AsyncWriteExt, Result};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 mod proof;
 mod rpc;
 
@@ -34,9 +34,9 @@ pub struct ExtrinsicsRoot {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct AppDataIndex{
+pub struct AppDataIndex {
     pub size: u32,
-    pub index: Vec<(u32, u32)>
+    pub index: Vec<(u32, u32)>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -47,7 +47,7 @@ pub struct Digest {
 #[derive(Deserialize, Debug)]
 pub struct QueryResult {
     result: Header,
-    subscription: String
+    subscription: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -80,7 +80,6 @@ pub struct BlockProofResponse {
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-
     let url = url::Url::parse("ws://localhost:9944").unwrap();
 
     let (ws_stream, _response) = connect_async(url).await.expect("Failed to connect");
@@ -88,11 +87,18 @@ pub async fn main() -> Result<()> {
 
     let (mut write, mut read) = ws_stream.split();
 
-    write.send(Message::Text(r#"{
+    write
+        .send(Message::Text(
+            r#"{
         "id":1, 
         "jsonrpc":"2.0", 
         "method": "subscribe_newHead"
-    }"#.to_string()+"\n")).await.unwrap();
+    }"#
+            .to_string()
+                + "\n",
+        ))
+        .await
+        .unwrap();
 
     // println!("Subscription Request Sent");
 
@@ -108,81 +114,62 @@ pub async fn main() -> Result<()> {
         match serde_json::from_slice(&data) {
             Ok(response) => {
                 let response: Response = response;
-                println!("\n{:?}", response.params.result);
+                // println!("\n{:?}", response.params.result);
                 let block_number = response.params.result.number;
-                // let bl = hex::decode(&block_number);
-                // println!("hexed value: {:?}",bl);
                 let raw = &block_number;
                 let without_prefix = raw.trim_start_matches("0x");
                 let z = u64::from_str_radix(without_prefix, 16);
-                // let src: &str = &block_number;
-                // let bl = hex::decode(&src[2..]);
-                 let num = &z.unwrap();
-                //  println!("hexd {:?}",num);
-                
-
-                // let v:u64 = serde_json::from_str(&block_number).unwrap();
-                // let blo = block_number.parse::<u64>().unwrap();
-                //  println!("blo number :{:?}",block_number);
+                let num = &z.unwrap();
                 let max_rows = response.params.result.extrinsics_root.rows;
                 let max_cols = response.params.result.extrinsics_root.cols;
                 let commitment = response.params.result.extrinsics_root.commitment;
                 let app_index = response.params.result.app_data_lookup.index;
                 let app_size = response.params.result.app_data_lookup.size;
-                //let mut cells = generate_random_cells(max_rows, max_cols);
-                let mut cells = if app_index.is_empty(){
-                    // println!("\n\n true \n\n");
-                     let cpy = generate_random_cells(max_rows, max_cols);
-                     cpy
-                }
-                else{
-                    let app_tup = app_index[0];
-                    let app_ind= app_tup.1;
-                    let cpy = generate_app_specific_cells(app_size, app_ind, max_rows, max_cols, *num);
+                let mut cells = if app_index.is_empty() {
+                    let cpy = generate_random_cells(max_rows, max_cols);
                     cpy
-
+                } else {
+                    let app_tup = app_index[0];
+                    let app_ind = app_tup.1;
+                    let cpy =
+                        generate_app_specific_cells(app_size, app_ind, max_rows, max_cols, *num);
+                    cpy
                 };
-                // let app_tup = app_index[0];
-                println!("cells after if-else check {:?}", cells);
+                // println!("cells after if-else check {:?}", cells);
                 let payload = generate_kate_query_payload(block_number, &cells);
                 let req = hyper::Request::builder()
-                .method(hyper::Method::POST)
-                .uri("http://localhost:9933")
-                .header("Content-Type", "application/json")
-                .body(hyper::Body::from(payload))
-                .unwrap();
+                    .method(hyper::Method::POST)
+                    .uri("http://localhost:9933")
+                    .header("Content-Type", "application/json")
+                    .body(hyper::Body::from(payload))
+                    .unwrap();
                 let resp = {
-                let client = hyper::Client::new();
-                client.request(req).await.unwrap()
+                    let client = hyper::Client::new();
+                    client.request(req).await.unwrap()
                 };
                 let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
                 let proof: BlockProofResponse = serde_json::from_slice(&body).unwrap();
                 fill_cells_with_proofs(&mut cells, &proof);
-                // println!("Proof: {:?}", proof);
-                // println!("cells: {:?}",cells);
+                //println!("Proof: {:?}", proof);
+                //println!("cells: {:?}",cells);
+                println!("\n🛠   Verifying block :{}", *num);
 
-
-                // let cells = get_kate_proof(block_number, max_rows, max_cols).await.unwrap();
-                let count = proof::verify_proof(
-                    max_rows,
-                    max_cols,
-                    &cells,
-                    &commitment,
-                );
+                let count = proof::verify_proof(max_rows, max_cols, &cells, &commitment);
                 println!(
                     "✅ Completed {} rounds of verification for block number {} ",
-                    count,
-                    num
-                    
+                    count, num
                 );
 
                 let conf = calculate_confidence(count);
                 let serialised_conf = serialised_confidence(*num, conf);
-                let mut sto:HashMap<u64, f64> = HashMap::new();
+                let mut sto: HashMap<u64, f64> = HashMap::new();
                 sto.insert(*num, conf);
-                println!("block: {}, confidence: {}, serialisedConfidence {}", *num, conf, serialised_conf);  
-            },
-            Err(error) => println!("Misconstructed Header: {:?}", error)
+                println!(
+                    "block: {}, confidence: {}, serialisedConfidence {}",
+                    *num, conf, serialised_conf
+                );
+            }
+            Err(error) => println!("Misconstructed Header: {:?}", error),
         }
 
         // hacky way of extracting number from header
@@ -192,7 +179,7 @@ pub async fn main() -> Result<()> {
         // let index_number = message_as_str.find("number");
         // match index_number {
         //     Some(index_of_number) => {
-        //         // hack: find where the number field ends by searching the closing " 
+        //         // hack: find where the number field ends by searching the closing "
         //         let index_of_number_end = message_as_str[(index_of_number+9)..].find('"').unwrap();
         //         let number = &message_as_str[(index_of_number+9)..(index_of_number+9+index_of_number_end)];
         //         println!("Number: {:?}", number);
@@ -207,8 +194,6 @@ pub async fn main() -> Result<()> {
 
     Ok(())
 }
-
-
 
 pub fn generate_random_cells(max_rows: u16, max_cols: u16) -> Vec<proof::Cell> {
     let count: u16 = if max_rows * max_cols < 8 {
@@ -259,7 +244,7 @@ pub async fn get_kate_proof(
     block: String,
     max_rows: u16,
     max_cols: u16,
-) -> Result<Vec<proof::Cell>, > {
+) -> Result<Vec<proof::Cell>> {
     let mut cells = generate_random_cells(max_rows, max_cols);
     let payload = generate_kate_query_payload(block, &cells);
     let req = hyper::Request::builder()
@@ -268,17 +253,15 @@ pub async fn get_kate_proof(
         .header("Content-Type", "application/json")
         .body(hyper::Body::from(payload))
         .unwrap();
-        let resp = {
-            let client = hyper::Client::new();
-            client.request(req).await.unwrap()
-        };
+    let resp = {
+        let client = hyper::Client::new();
+        client.request(req).await.unwrap()
+    };
     let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
     let proof: BlockProofResponse = serde_json::from_slice(&body).unwrap();
     fill_cells_with_proofs(&mut cells, &proof);
     Ok(cells)
 }
-
-
 
 fn calculate_confidence(count: u32) -> f64 {
     100f64 * (1f64 - 1f64 / 2u32.pow(count) as f64)
@@ -286,28 +269,33 @@ fn calculate_confidence(count: u32) -> f64 {
 
 fn serialised_confidence(block: u64, factor: f64) -> String {
     let _block: BigUint = FromPrimitive::from_u64(block).unwrap();
-    let _factor: BigUint =
-        FromPrimitive::from_u64((10f64.powi(7) * factor) as u64).unwrap();
+    let _factor: BigUint = FromPrimitive::from_u64((10f64.powi(7) * factor) as u64).unwrap();
     let _shifted: BigUint = _block << 32 | _factor;
     _shifted.to_str_radix(10)
 }
 
-pub fn generate_app_specific_cells(size:u32, index:u32,max_rows:u16, max_col:u16, block:u64) -> Vec<proof::Cell>{
+pub fn generate_app_specific_cells(
+    size: u32,
+    index: u32,
+    max_rows: u16,
+    max_col: u16,
+    block: u64,
+) -> Vec<proof::Cell> {
     let mut buf = Vec::new();
-    let rows:u16 = 0;
-    for i  in 0..size{ 
-        let rows = if rows<max_rows{
-            index as u16/max_col
-        }else{
-            (index as u16/max_col) + i as u16
+    let rows: u16 = 0;
+    for i in 0..size {
+        let rows = if rows < max_rows {
+            index as u16 / max_col
+        } else {
+            (index as u16 / max_col) + i as u16
         };
-        let cols = (index as u16%max_col) + i as u16;
-        buf.push(proof::Cell{
-            block:block, 
-            row: rows as u16, 
+        let cols = (index as u16 % max_col) + i as u16;
+        buf.push(proof::Cell {
+            block: block,
+            row: rows as u16,
             col: cols as u16,
             ..Default::default()
         });
-    }   
+    }
     buf
 }

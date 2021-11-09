@@ -64,9 +64,9 @@ pub struct Digest {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct AppDataIndex{
+pub struct AppDataIndex {
     pub size: u32,
-    pub index: Vec<(u32, u32)>
+    pub index: Vec<(u32, u32)>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -190,11 +190,11 @@ pub fn generate_random_cells(max_rows: u16, max_cols: u16, block: u64) -> Vec<Ce
     buf
 }
 
-pub fn generate_app_specific_cells(rows: u32, cols: u32, block:u64) -> Vec<Cell>{
+pub fn generate_app_specific_cells(rows: u32, cols: u32, block: u64) -> Vec<Cell> {
     let mut buf = Vec::new();
-    buf.push(Cell{
-        block:block, 
-        row: rows as u16, 
+    buf.push(Cell {
+        block: block,
+        row: rows as u16,
         col: cols as u16,
         ..Default::default()
     });
@@ -222,11 +222,7 @@ pub fn fill_cells_with_proofs(cells: &mut Vec<Cell>, proof: &BlockProofResponse)
     }
 }
 
-pub async fn get_kate_proof(
-    block: u64,
-    max_rows: u16,
-    max_cols: u16,
-) -> Result<Vec<Cell>, String> {
+pub async fn get_kate_proof(block: u64, max_rows: u16, max_cols: u16) -> Result<Vec<Cell>, String> {
     let mut cells = generate_random_cells(max_rows, max_cols, block);
     let payload = generate_kate_query_payload(block, &cells);
     let req = hyper::Request::builder()
@@ -249,7 +245,7 @@ pub async fn get_kate_proof(
     Ok(cells)
 }
 
-pub async fn subscribe_block()->Result<Header, String>{
+pub async fn subscribe_block() -> Result<Header, String> {
     let payload = format!(
         r#"{{"id": 1, "jsonrpc": "2.0", "method": "chain_subscribeNewHeads", "params": []]}}"#,
     );
