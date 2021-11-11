@@ -7,8 +7,6 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::sync::{Arc, Mutex};
 
-pub type Store = Arc<Mutex<HashMap<u64, u32>>>;
-
 #[derive(Deserialize, Debug)]
 pub struct BlockHashResponse {
     jsonrpc: String,
@@ -20,25 +18,25 @@ pub struct BlockHashResponse {
 pub struct BlockResponse {
     jsonrpc: String,
     id: u32,
-    result: RPCResult,
+    pub result: RPCResult,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct RPCResult {
-    block: Block,
+    pub block: Block,
     #[serde(skip_deserializing)]
-    justification: String,
+    pub justification: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Block {
-    extrinsics: Vec<String>,
+    pub extrinsics: Vec<String>,
     pub header: Header,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Header {
-    number: String,
+    pub number: String,
     #[serde(rename = "extrinsicsRoot")]
     pub extrinsics_root: ExtrinsicsRoot,
     #[serde(rename = "parentHash")]
@@ -73,7 +71,7 @@ pub struct AppDataIndex {
 pub struct BlockProofResponse {
     jsonrpc: String,
     id: u32,
-    result: Vec<u8>,
+    pub result: Vec<u8>,
 }
 
 #[derive(Default, Debug)]
@@ -94,7 +92,7 @@ fn get_full_node_url() -> String {
     if let Ok(v) = env::var("FullNodeURL") {
         v
     } else {
-        "http://localhost:9999".to_owned()
+        "http://localhost:9933".to_owned()
     }
 }
 
@@ -155,6 +153,8 @@ pub async fn get_block_by_hash(hash: String) -> Result<Block, String> {
         client.request(req).await.unwrap()
     };
     let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
+    //the part where is failing - uncomment to see the body part ⬇️
+    // println!("testing out the body {:?} 🤔👀", body); 
     let b: BlockResponse = serde_json::from_slice(&body).unwrap();
     Ok(b.result.block)
 }
@@ -190,17 +190,6 @@ pub fn generate_random_cells(max_rows: u16, max_cols: u16, block: u64) -> Vec<Ce
     buf
 }
 
-pub fn generate_app_specific_cells(rows: u32, cols: u32, block: u64) -> Vec<Cell> {
-    let mut buf = Vec::new();
-    buf.push(Cell {
-        block: block,
-        row: rows as u16,
-        col: cols as u16,
-        ..Default::default()
-    });
-    buf
-}
-
 pub fn generate_kate_query_payload(block: u64, cells: &Vec<Cell>) -> String {
     let mut query = Vec::new();
     for cell in cells {
@@ -223,7 +212,44 @@ pub fn fill_cells_with_proofs(cells: &mut Vec<Cell>, proof: &BlockProofResponse)
 }
 
 pub async fn get_kate_proof(block: u64, max_rows: u16, max_cols: u16) -> Result<Vec<Cell>, String> {
-    let mut cells = generate_random_cells(max_rows, max_cols, block);
+
+    /* @@note : 
+    the following code is for modularizing the code. 
+    It basically used for asdr branch to check for index
+
+    let num = get_block_by_number(block).await.unwrap();
+    let cols = num.header.extrinsics_root.cols;
+    let rows = num.header.extrinsics_root.rows;
+    let commit = num.header.extrinsics_root.commitment;
+    let app_index = num.header.app_data_lookup.index;
+    let app_size = num.header.app_data_lookup.size;
+    let mut cells = if app_index.is_empty() {
+        let cpy = generate_random_cells(max_rows, max_cols, block);
+        cpy
+    } else {
+        let app_tup = app_index[0];
+        let app_ind = app_tup.1;
+        let cpy = generate_app_specific_cells(app_size, app_ind, rows, cols, block);
+        cpy
+    };
+    */
+
+    let num = get_block_by_number(block).await.unwrap();
+    let cols = num.header.extrinsics_root.cols;
+    let rows = num.header.extrinsics_root.rows;
+    let commit = num.header.extrinsics_root.commitment;
+    let app_index = num.header.app_data_lookup.index;
+    let app_size = num.header.app_data_lookup.size;
+    let mut cells = if app_index.is_empty() {
+        let cpy = generate_random_cells(max_rows, max_cols, block);
+        cpy
+    } else {
+        let app_tup = app_index[0];
+        let app_ind = app_tup.1;
+        let cpy = generate_app_specific_cells(app_size, app_ind, rows, cols, block);
+        cpy
+    };
+    // let mut cells = generate_random_cells(max_rows, max_cols, block);
     let payload = generate_kate_query_payload(block, &cells);
     let req = hyper::Request::builder()
         .method(hyper::Method::POST)
@@ -245,25 +271,28 @@ pub async fn get_kate_proof(block: u64, max_rows: u16, max_cols: u16) -> Result<
     Ok(cells)
 }
 
-pub async fn subscribe_block() -> Result<Header, String> {
-    let payload = format!(
-        r#"{{"id": 1, "jsonrpc": "2.0", "method": "chain_subscribeNewHeads", "params": []]}}"#,
-    );
-    let req = hyper::Request::builder()
-        .method(hyper::Method::POST)
-        .uri(get_full_node_url())
-        .header("Content-Type", "application/json")
-        .body(hyper::Body::from(payload))
-        .unwrap();
-    let resp = if is_secure(&get_full_node_url()) {
-        let https = HttpsConnector::new();
-        let client = hyper::Client::builder().build::<_, hyper::Body>(https);
-        client.request(req).await.unwrap()
-    } else {
-        let client = hyper::Client::new();
-        client.request(req).await.unwrap()
-    };
-    let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
-    let b: BlockResponse = serde_json::from_slice(&body).unwrap();
-    Ok(b.result.block.header)
+pub fn generate_app_specific_cells(
+    size: u32,
+    index: u32,
+    max_rows: u16,
+    max_col: u16,
+    block: u64,
+) -> Vec<Cell> {
+    let mut buf = Vec::new();
+    let rows: u16 = 0;
+    for i in 0..size {
+        let rows = if rows < max_rows {
+            index as u16 / max_col
+        } else {
+            (index as u16 / max_col) + i as u16
+        };
+        let cols = (index as u16 % max_col) + i as u16;
+        buf.push(Cell {
+            block: block,
+            row: rows as u16,
+            col: cols as u16,
+            ..Default::default()
+        });
+    }
+    buf
 }

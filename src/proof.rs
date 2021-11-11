@@ -1,14 +1,8 @@
+use crate::rpc::Cell;
 use dusk_plonk::bls12_381::G1Affine;
 use dusk_plonk::commitment_scheme::kzg10;
 use dusk_plonk::fft::EvaluationDomain;
 use std::convert::TryInto;
-#[derive(Default, Debug)]
-pub struct Cell {
-    pub block: u64,
-    pub row: u16,
-    pub col: u16,
-    pub proof: Vec<u8>,
-} // use dusk_bytes::Serializable;
 
 // code for light client to verify incoming kate proofs
 // args - now - column number, response (witness + evaluation_point = 48 + 32 bytes), commitment (as bytes)
