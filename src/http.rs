@@ -1,33 +1,24 @@
 use crate::proof;
 use crate::rpc;
-use crate::rpc::Cell;
-use ::futures::{channel::oneshot, prelude::*};
+use ::futures::prelude::*;
 use chrono::{DateTime, Local};
 use hyper::header::ACCESS_CONTROL_ALLOW_ORIGIN;
 use hyper::service::Service;
 use hyper::{Body, Method, Request, Response, Server, StatusCode};
-use hyper_tls::HttpsConnector;
 use num::{BigUint, FromPrimitive};
-use rand::{thread_rng, Rng};
 use regex::Regex;
-use serde::{Deserialize, Deserializer};
-use std::collections::{HashMap, HashSet};
-use std::env;
+use std::collections::HashMap;
 use std::{
-    borrow::Cow,
-    convert::TryFrom as _,
-    fs, io, iter,
-    path::PathBuf,
     pin::Pin,
     sync::{Arc, Mutex},
     task::{Context, Poll},
-    thread,
-    time::{Duration, Instant},
+    time::Instant,
 };
-use structopt::StructOpt as _;
 use tokio;
-use tracing::Instrument as _;
 
+// 💡 HTTP part where handles the RPC Queries 
+
+//service part of hyper 
 struct Handler {
     store: Arc<Mutex<HashMap<u64, u32>>>,
 }
@@ -102,7 +93,7 @@ impl Service<Request<Body>> for Handler {
                     if let Ok(block_num) = match_url(req.uri().path()) {
                         let count = match get_confidence(db.clone(), block_num) {
                             Ok(count) => {
-                                println!("yey match found in DB 😄 for blocknumber {}", block_num);
+                                println!(" confidence already stored in memory 😄 for blocknumber {} ", block_num);
                                 count
                             }
                             Err(_e) => {
@@ -120,7 +111,7 @@ impl Service<Request<Body>> for Handler {
                                     &block.header.extrinsics_root.commitment,
                                 );
                                 println!(
-                                    "✅ Completed {} rounds of verification for #{} in {:?}",
+                                    "✅ Completed {} rounds of verification for #{} in {:?}\n",
                                     count,
                                     block_num,
                                     begin.elapsed()
@@ -185,7 +176,6 @@ impl<T> Service<T> for MakeHandler {
 pub async fn run_server(
     store: Arc<Mutex<HashMap<u64, u32>>>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // let store:Store = Arc::new(Mutex::new(HashMap::new()));
     let addr = ([127, 0, 0, 1], rpc::get_port()).into();
     let server = Server::bind(&addr).serve(MakeHandler { store });
     println!("✅ Listening on http://127.0.0.1:{}", rpc::get_port());

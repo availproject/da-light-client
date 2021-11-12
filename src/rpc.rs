@@ -1,11 +1,12 @@
+#![allow(dead_code)]
 use hyper;
 use hyper_tls::HttpsConnector;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
-use std::sync::{Arc, Mutex};
+use dotenv::dotenv;
 
 #[derive(Deserialize, Debug)]
 pub struct BlockHashResponse {
@@ -30,7 +31,7 @@ pub struct RPCResult {
 
 #[derive(Deserialize, Debug)]
 pub struct Block {
-    pub extrinsics: Vec<String>,
+    pub extrinsics: Vec<Vec<u8>>,
     pub header: Header,
 }
 
@@ -88,7 +89,30 @@ pub struct MatrixCell {
     col: u16,
 }
 
-fn get_full_node_url() -> String {
+#[derive(Deserialize, Debug)]
+pub struct QueryResult {
+    pub result: Header,
+    subscription: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Response {
+    jsonrpc: String,
+    method: String,
+    pub params: QueryResult,
+}
+
+pub fn get_ws_node_url() -> String {
+    dotenv().ok();
+    if let Ok(v) = env::var("FullNodeWSURL") {
+        v
+    } else {
+        "ws://localhost:9944".to_owned()
+    }
+}
+
+pub fn get_full_node_url() -> String {
+    dotenv().ok();
     if let Ok(v) = env::var("FullNodeURL") {
         v
     } else {
@@ -102,6 +126,7 @@ fn is_secure(url: &str) -> bool {
 }
 
 pub fn get_port() -> u16 {
+    dotenv().ok();
     if let Ok(v) = env::var("Port") {
         v.parse::<u16>().unwrap()
     } else {
@@ -153,8 +178,6 @@ pub async fn get_block_by_hash(hash: String) -> Result<Block, String> {
         client.request(req).await.unwrap()
     };
     let body = hyper::body::to_bytes(resp.into_body()).await.unwrap();
-    //the part where is failing - uncomment to see the body part ⬇️
-    // println!("testing out the body {:?} 🤔👀", body); 
     let b: BlockResponse = serde_json::from_slice(&body).unwrap();
     Ok(b.result.block)
 }
@@ -218,9 +241,6 @@ pub async fn get_kate_proof(block: u64, max_rows: u16, max_cols: u16) -> Result<
     It basically used for asdr branch to check for index
 
     let num = get_block_by_number(block).await.unwrap();
-    let cols = num.header.extrinsics_root.cols;
-    let rows = num.header.extrinsics_root.rows;
-    let commit = num.header.extrinsics_root.commitment;
     let app_index = num.header.app_data_lookup.index;
     let app_size = num.header.app_data_lookup.size;
     let mut cells = if app_index.is_empty() {
@@ -235,9 +255,6 @@ pub async fn get_kate_proof(block: u64, max_rows: u16, max_cols: u16) -> Result<
     */
 
     let num = get_block_by_number(block).await.unwrap();
-    let cols = num.header.extrinsics_root.cols;
-    let rows = num.header.extrinsics_root.rows;
-    let commit = num.header.extrinsics_root.commitment;
     let app_index = num.header.app_data_lookup.index;
     let app_size = num.header.app_data_lookup.size;
     let mut cells = if app_index.is_empty() {
@@ -246,10 +263,9 @@ pub async fn get_kate_proof(block: u64, max_rows: u16, max_cols: u16) -> Result<
     } else {
         let app_tup = app_index[0];
         let app_ind = app_tup.1;
-        let cpy = generate_app_specific_cells(app_size, app_ind, rows, cols, block);
+        let cpy = generate_app_specific_cells(app_size, app_ind, max_rows, max_cols, block);
         cpy
     };
-    // let mut cells = generate_random_cells(max_rows, max_cols, block);
     let payload = generate_kate_query_payload(block, &cells);
     let req = hyper::Request::builder()
         .method(hyper::Method::POST)
