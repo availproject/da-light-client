@@ -36,7 +36,7 @@ PORT | Light client exposes RPC server over HTTP, at this port number
 - Now, let's run light client
 
 ```bash
-make run
+cargo run
 ```
 
 ## Usage
@@ -60,7 +60,5 @@ curl -s localhost:7000/v1/confidence/ _block-number_
 **Note :** Serialised confidence calculated as: 
 > `blockNumber << 32 | int32(confidence * 10 ** 7)`, where confidence is represented as out of 10 ** 9
 
-Here's one visual
 
-![confidence-serialisation](../img/serialised-confidence.jpg)
 
